@@ -1,0 +1,14 @@
+Package: AUdata2018
+Type: Package
+Title: AU data analysis summer 2018
+Version: 0.1.0
+Author: Roopa Krithivasan
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: Analysis of data on agricultural units in 6 villages in himachal pradesh, collected summer 2018
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr

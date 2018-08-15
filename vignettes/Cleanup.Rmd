@@ -1,19 +1,43 @@
 ---
-title: "Cleanup 1"
-author: "Vignette Author"
+title: "AU data cleanup and preliminary analysis"
+author: "Roopa Krithivasan"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+install package. Add data
+```{r}
+library(devtools)
+library(githubinstall)
+install_github("roopakrithi/AUdata2018", build_vignettes = F)
+
+fl <- system.file("extdata/", package = "AUdata2018") 
+au <- read.csv(paste0(fl, "AU_data_AU_2018-08-15.csv", stringsAsFactors = FALSE))
+
+sapply(30, function(x){
+print(names(au[x]))
+print(head(au[,x]))
+print(unique(au[,x]))
+class(au[,x])
+levels(au[,x])
+})
+names(au)
+crops <- c(au[,29])
+unique(au[,29:44]) NOPE
+
+
+
+Things to check
+vis.settl
+
+
+
 ```
 
 Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:

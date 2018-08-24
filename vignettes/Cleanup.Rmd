@@ -27,28 +27,78 @@ crops <- as.vector(as.matrix(au[,29:44]))
 sort(unique(crops))
 # looks fine.
 
+# add variable for subregion (I'm being very lazy, sorry)
+au$subr[au$VillageID == 1] <- 1
+au$subr[au$VillageID == 2] <- 1
+au$subr[au$VillageID == 3] <- 1
+au$subr[au$VillageID == 4] <- 2
+au$subr[au$VillageID == 5] <- 2
+au$subr[au$VillageID ==6] <- 3
+au$subr[au$VillageID ==7] <- 3
+
 ```
 
 Start looking at the data:
 
 ```{r}
-library(corrplot)
-names(au)
-aus <- au[, c(20, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 22, 25, 26, 18, 68)]
-hist(aus$travel.time)
 
-aus[is.na(aus)] <- 0
-hist(aus$pc.cropped.summer)
+# list of most useful variables
+# vars <- c(96, 20, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 22, 25, 26, 18, 68, 91)
+
+au[is.na(au)] <- 0
+## be careful, there are a few variables where NA =/= 0
+
+
+
+
+
+
+
+
+```
+
+
+A few new variables
+```{r}
+# squared travel time
+au$tt2 <- (au$travel.time)^2
+
+# visible from village OR major thoroughfare 
+au$vis.any <- 0 #don't actually need this
+au$vis.any <- ifelse(( au$vis.settl == 1 | au$vis.other == 1), 1, 0)
+# visual check:
+#cbind(au$vis.settl, au$vis.other,  au$vis.any)
+
+
+# higest severity for any species
+au$max.threat <- apply(au[,c("monkey.threat", "boar.threat", "Ung.threat", "Other.threat" )], 1, max)
+# visual check:
+#cbind(au$monkey.threat, au$boar.threat, au$Ung.threat, au$max.threat)
+```
+
+There are a number of things that could be driving trends. pretend you just don't care what the results show. you just want to know what sorts of variables are predicting:
+1. which AUs have been abandoned (level 0)
+2. where people have decreased planting (level 1)
+3. where has there been intensification (ie, more area planted OR more cash crops than previous)
+4. what areas have high/severe percieved loss (by species)
+5. what areas have some sort of collective protection
+
+
+
+Old LMs, delete later
+```{r}
+
+
 
 lm1 <- lm(pc.cropped.summer ~ travel.time + borders.forest + borders.water + vis.settl, data = aus)
 summary(lm1)
 
 aus$tt2 <- (au$travel.time)^2
 
-lm2 <- lm(inactive.pc ~ travel.time + tt2 + borders.forest + borders.water + vis.settl, data = aus[1:125,])
+lm2 <- lm(pc.cropped.summer ~ travel.time + tt2 + borders.forest + borders.water + vis.settl
+             + as.factor(subr)
+          , data = aus[1:125,])
 summary(lm2)
-plot(lm2)
-
 
 
 lm3 <- lm(pc.cropped.summer ~ travel.time + borders.forest + borders.water + vis.settl 
@@ -68,19 +118,6 @@ summary(aus)
 hist(aus)
 #Ask tim how to account for different villages/regions.
 
-
 ```
-
-OK, very preliminarily:
-- percieved threat of monkeys (at least) is higher near forest, lowest near settlements.
-- visibility is the most significant predictor of pc usage (+), AND pc inactivity (-), even after controlling for travel time. so in considering where to plant how visible it is from the settlement is really important. 
-- for pc usage, proximity to forest and water aren't significant
-- number of households farming an AU, the area of an AU, or the per capita area don't seem to matter
-
-so...
-- threat id definitely corr with habitat (higher threat of loss near forest, for monkeys); but, land use decisions are corr with ease of implementing (passive) protection (more ag near village in places where it's easy to visually monitor)
-- so next I need to see if active shared or 3rd party monitoring is corr. with anything in particular. I assume it'll be: AUs with lots of people, in areas that are near forest/water, and net neccesarily corr with distance to village (not sure about the last part)
-- then, it might make sense to look at crop choice -- in areas that are high threat - low visibiity, are the crops being planted significantly different? (will have to mess around with the data a lot to get at this)
-
 
 

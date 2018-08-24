@@ -11,79 +11,76 @@ editor_options:
   chunk_output_type: console
 ---
 
-install package. Add data
+install package. Add data. Check to make sure it's clean.
 ```{r}
 library(devtools)
 library(githubinstall)
 install_github("roopakrithi/AUdata2018", build_vignettes = F)
 
 fl <- system.file("extdata/", package = "AUdata2018") 
-au <- read.csv(paste0(fl, "AU_data_AU_2018-08-15.csv", stringsAsFactors = FALSE))
+au <- read.csv(paste0(fl, "AU_data_AU_2018-08-15.csv"))
+au <- as.data.frame(au, stringsAsFactors = F)
 
-sapply(30, function(x){
-print(names(au[x]))
-print(head(au[,x]))
-print(unique(au[,x]))
-class(au[,x])
-levels(au[,x])
-})
+#Are the crops correct (since I used names instead of codes, 
+  #want to check for spelling errors etc.)
+crops <- as.vector(as.matrix(au[,29:44]))
+sort(unique(crops))
+# looks fine.
+
+```
+
+Start looking at the data:
+
+```{r}
+library(corrplot)
 names(au)
-crops <- c(au[,29])
-unique(au[,29:44]) NOPE
+aus <- au[, c(20, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 22, 25, 26, 18, 68)]
+hist(aus$travel.time)
+
+aus[is.na(aus)] <- 0
+hist(aus$pc.cropped.summer)
+
+lm1 <- lm(pc.cropped.summer ~ travel.time + borders.forest + borders.water + vis.settl, data = aus)
+summary(lm1)
+
+aus$tt2 <- (au$travel.time)^2
+
+lm2 <- lm(inactive.pc ~ travel.time + tt2 + borders.forest + borders.water + vis.settl, data = aus[1:125,])
+summary(lm2)
+plot(lm2)
 
 
 
-Things to check
-vis.settl
+lm3 <- lm(pc.cropped.summer ~ travel.time + borders.forest + borders.water + vis.settl 
+          , data = aus[c(1:80,100:125),])
 
+lm4 <- lm(inactive.pc ~ travel.time + borders.forest + borders.water + vis.settl 
+          , data = aus[c(1:80,100:125),])
+summary(lm4)
+
+lm5 <- lm(inactive.pc ~ travel.time + borders.forest + borders.water + AU.hh, 
+          data = aus[(1:80,),])
+summary(lm5)
+
+lm6 <- lm(monkey.threat ~ travel.time + borders.forest + borders.water + borders.settl 
+          , data = aus[1:99,])
+summary(aus)
+hist(aus)
+#Ask tim how to account for different villages/regions.
 
 
 ```
 
-Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
+OK, very preliminarily:
+- percieved threat of monkeys (at least) is higher near forest, lowest near settlements.
+- visibility is the most significant predictor of pc usage (+), AND pc inactivity (-), even after controlling for travel time. so in considering where to plant how visible it is from the settlement is really important. 
+- for pc usage, proximity to forest and water aren't significant
+- number of households farming an AU, the area of an AU, or the per capita area don't seem to matter
 
-- Never uses retina figures
-- Has a smaller default figure size
-- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
+so...
+- threat id definitely corr with habitat (higher threat of loss near forest, for monkeys); but, land use decisions are corr with ease of implementing (passive) protection (more ag near village in places where it's easy to visually monitor)
+- so next I need to see if active shared or 3rd party monitoring is corr. with anything in particular. I assume it'll be: AUs with lots of people, in areas that are near forest/water, and net neccesarily corr with distance to village (not sure about the last part)
+- then, it might make sense to look at crop choice -- in areas that are high threat - low visibiity, are the crops being planted significantly different? (will have to mess around with the data a lot to get at this)
 
-## Vignette Info
 
-Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
 
-## Styles
-
-The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
-
-    output: 
-      rmarkdown::html_vignette:
-        css: mystyles.css
-
-## Figures
-
-The figure sizes have been customised so that you can easily put two images side-by-side. 
-
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
-```
-
-You can enable figure captions by `fig_caption: yes` in YAML:
-
-    output:
-      rmarkdown::html_vignette:
-        fig_caption: yes
-
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
-
-## More Examples
-
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
-
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
-```
-
-Also a quote using `>`:
-
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))

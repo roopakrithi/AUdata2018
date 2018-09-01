@@ -120,4 +120,47 @@ hist(aus)
 
 ```
 
+** these findings suggest a few different mechanisms of land change:
+- people stop farming, or farm less, in areas that are further away because they are less convenient, and, particularly as this is also correlated with les dependence on agriculture as a primary livelihood, convenience is a major driver of abandonment. this is generally in keeping with theories about deagrarianiation.
+- another explanation is that people farm less in areas that are difficult to protect. difficulty may be in the form of areas that are hard to monitor passively because they are less visible from settled areas or areas of high traffic; conveneience plays a part here too...
 
+
+point being, I think there's a policy angle here. a number of different mechanisms can drive similar land use patterns, including economic drivers and wildife-depredation management optimization. 
+
+So based on these initial findings, I want to try to understand (1) what the different possible mechanisms are that could explain observed patterns of land change, and (2) how different policy interventions would potentially impact long-term outcomes. this is NOT what I set out to do. but think about it a bit...
+
+
+____________
+
+
+
+
+
+Land use trends: I expect to find that there is more intensive use in areas that are visible from settlements or within 5 minutes. I expect to find areas more than 5 minutes away to have more crop diversity reported, and more fallows reported. (i think)
+
+*** HWC draws attention to spatial patterns of crop losses to wildlife, and also suggest that areas of high HWC are prone to abandonment. However  few studies evaluate how this works in relation to farmers' individual and collective management decisions about crop selection and crop protection. My case study will hopefuly show that similar to previous studies threat is highest near forests and abandonment is also higher near forests, agricultural land in high threat areas also collectively managed by local communities to reduce potential losses. These patterns  produce dynamic land use patterns that are responsive to wildlife pressures.  While these trends are particularly strong in communities with long, vibrant histories of collective action, I find that even in areas which have not had a strong tradition of collectively managing crops to prevent wildlife-related losses, collective systems are continuously evolving to leverage local and state resources to effectively reduce losses]. These findings suggest that (1) for policy interventions targetting communities facing wildlife threats, it is important to continue to develop not just individual-scale solutions (such as compensation schemes targetting individual households) but also look toward interventions that can work with existing or emergent collective structures, and (2) while the literature primarily focuses on land use change (particularly forest/habitat loss) as a driver of human wildlife conflict, it it worth noting that wildlife also have significant impacts on farmer choices and land cover outcomes. Further, AUs that are more central and further from forests are more intensively farmed, while more distant areas are used more extensively, producing a dynamic zone of interaction. research is required to evaluate how feedbacks between wildlife depredation of crops and farmers' individual and collective decisions about agriculture are mediated through dynamic land use change at fine spatial scales.*** 
+
+Break this down:
+
+1. HWC lit has generally found that ag areas closer to forests and other habitat features are at highest risk of depredation. Does this hold true here?
+- how does threat level correlate with distance to forest and rivers?
+- how do losses correlate with forest and rivers?
+
+2. Is there more abandonment near these features? Is there more abandonment in areas identified as having higher threat levels?
+
+3. But... Do areas with more threat also have more collective action? What else explains AUs with collective management?
+  - I expect that in the first cluster, yes (for threat level 3-4)
+  - at level 5, abandonment is much more likely
+  - also expect this to be related to (following from CA lit), a larger number of people using it, and more people who are ag dependent. 
+  
+4. but... how do relationships with wildlife impact land use patterns? I STILL DON'T KNOW WHAT  QUESTIONS TO ASK HERE? 
+  - What are the land use outcomes I'm interested in? cash crops, area sown, what crops are planted, often were there fallows (maybe)
+  
+  - I expect that areas with high but not severe threat have over time been less intensively used, less area used, and more abandonment. 
+  - but I also expect that they may be more diverse in their crops. 
+  - at the same threat level, being in a village with some collective action increases the likelihood of remaining in use 
+    - of course, this may be correlated with some factor other than wildlife... if the area is marginal to begin with, it might be that abandonment is more likely anyway, and protection of any sort is less likely. this would be a completely expected
+
+  
+
+  

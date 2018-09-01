@@ -91,8 +91,8 @@ monkey.threat,Roopa's assessment of relative severity of wildlife threat. ,"0 = 
 1 = v. low (losses are kept under 4-5% far all major crops even without protection)
 2 = low (losses are kept under 5-10% for major crops even without protection)
 3 = moderate (losses are 10-20% without protection or minimal protection, but usually some measures are taken to monitor for wildlife)
-4 = high (losses are over 20-30%, and can only be minimized with active protection)
-5 = severe (losses are over 40%, even with some monitoring effort.)",
+4 = high (losses are over 20-30%, and can only be minimized with active protection. If unmonitored, losses are over 75-80%)
+5 = severe (losses are over 40%, even with some monitoring effort. If Unmonitored, losses are nearly 100%)",
 monkey.potato,,Percent of total sown area (potato) destroyed or severely damaged by monkeys,
 monkey.wheat,,etc,
 monkey.peas,,,

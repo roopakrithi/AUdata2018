@@ -24,17 +24,8 @@ au <- as.data.frame(au, stringsAsFactors = F)
 #Are the crops correct (since I used names instead of codes, 
   #want to check for spelling errors etc.)
 crops <- as.vector(as.matrix(au[,29:44]))
-sort(unique(crops))
+table(crops)
 # looks fine.
-
-# add variable for subregion (I'm being very lazy, sorry)
-au$subr[au$VillageID == 1] <- 1
-au$subr[au$VillageID == 2] <- 1
-au$subr[au$VillageID == 3] <- 1
-au$subr[au$VillageID == 4] <- 2
-au$subr[au$VillageID == 5] <- 2
-au$subr[au$VillageID ==6] <- 3
-au$subr[au$VillageID ==7] <- 3
 
 ```
 
@@ -43,17 +34,10 @@ Start looking at the data:
 ```{r}
 
 # list of most useful variables
-# vars <- c(96, 20, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 22, 25, 26, 18, 68, 91)
+# vars <- c(1, 20, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 22, 25, 26, 18, 68, 91)
 
 au[is.na(au)] <- 0
 ## be careful, there are a few variables where NA =/= 0
-
-
-
-
-
-
-
 
 ```
 
@@ -69,23 +53,54 @@ au$vis.any <- ifelse(( au$vis.settl == 1 | au$vis.other == 1), 1, 0)
 # visual check:
 #cbind(au$vis.settl, au$vis.other,  au$vis.any)
 
-
 # higest severity for any species
-au$max.threat <- apply(au[,c("monkey.threat", "boar.threat", "Ung.threat", "Other.threat" )], 1, max)
+au$max.threat <- apply(au[,c("monkey.threat", "boar.threat", "ung.threat", "other.threat" )], 1, max)
 # visual check:
-#cbind(au$monkey.threat, au$boar.threat, au$Ung.threat, au$max.threat)
+cbind(au$monkey.threat, au$boar.threat, au$ung.threat, au$max.threat)
 ```
 
-There are a number of things that could be driving trends. pretend you just don't care what the results show. you just want to know what sorts of variables are predicting:
-1. which AUs have been abandoned (level 0)
-2. where people have decreased planting (level 1)
-3. where has there been intensification (ie, more area planted OR more cash crops than previous)
-4. what areas have high/severe percieved loss (by species)
-5. what areas have some sort of collective protection
+***  HWC draws attention to spatial patterns of crop losses to wildlife, and also suggest that areas of high HWC are prone to abandonment. However  few studies evaluate how this works in relation to farmers' individual and collective management decisions about crop selection and crop protection. My case study will hopefuly show that similar to previous studies threat is highest near forests and abandonment is also higher near forests, agricultural land in high threat areas also collectively managed by local communities to reduce potential losses. These patterns  produce dynamic land use patterns that are responsive to wildlife pressures.  While these trends are particularly strong in communities with long, vibrant histories of collective action, I find that even in areas which have not had a strong tradition of collectively managing crops to prevent wildlife-related losses, collective systems are continuously evolving to leverage local and state resources to effectively reduce losses]. These findings suggest that (1) for policy interventions targetting communities facing wildlife threats, it is important to continue to develop not just individual-scale solutions (such as compensation schemes targetting individual households) but also look toward interventions that can work with existing or emergent collective structures, and (2) while the literature primarily focuses on land use change (particularly forest/habitat loss) as a driver of human wildlife conflict, it it worth noting that wildlife also have significant impacts on farmer choices and land cover outcomes. Further, AUs that are more central and further from forests are more intensively farmed, while more distant areas are used more extensively, producing a dynamic zone of interaction. research is required to evaluate how feedbacks between wildlife depredation of crops and farmers' individual and collective decisions about agriculture are mediated through dynamic land use change at fine spatial scales.*** 
+
+Break this down:
+
+1. HWC lit has generally found that ag areas closer to forests and other habitat features are at highest risk of depredation. Does this hold true here?
+- how does **threat level** correlate with distance to forest and rivers?
+- how do **losses** correlate with forest and rivers?
+
+For threat level:
+- this is a likert-like scale, so I'll have to use ordinal regression. I could combine the categories, but I actually want to avoid doing that beucase I think there are important differences between 4 and 5. 
+
+```{r}
+
+```
 
 
+2. Is there more abandonment near these features? Is there more abandonment in areas identified as having higher threat levels?
 
-Old LMs, delete later
+3. But... Do areas with more threat also have more collective action? What else explains AUs with collective management?
+  - I expect that in the first cluster, yes (for threat level 3-4)
+  - at level 5, abandonment is much more likely
+  - also expect this to be related to (following from CA lit), a larger number of people using it, and more people who are ag dependent. 
+  
+4. but... how do relationships with wildlife impact land use patterns? I STILL DON'T KNOW WHAT  QUESTIONS TO ASK HERE? 
+  - What are the land use outcomes I'm interested in? cash crops, area sown, what crops are planted, often were there fallows (maybe)
+  
+  - I expect that areas with high but not severe threat have over time been less intensively used, less area used, and more abandonment. 
+  - but I also expect that they may be more diverse in their crops. 
+  - at the same threat level, being in a village with some collective action increases the likelihood of remaining in use 
+    - of course, this may be correlated with some factor other than wildlife... if the area is marginal to begin with, it might be that abandonment is more likely anyway, and protection of any sort is less likely. this would be a completely expected
+
+  
+  
+  
+  
+  
+  
+  
+  
+  _____
+  
+  Old LMs, delete later
 ```{r}
 
 
@@ -131,36 +146,5 @@ So based on these initial findings, I want to try to understand (1) what the dif
 
 
 ____________
-
-
-
-
-
-Land use trends: I expect to find that there is more intensive use in areas that are visible from settlements or within 5 minutes. I expect to find areas more than 5 minutes away to have more crop diversity reported, and more fallows reported. (i think)
-
-*** HWC draws attention to spatial patterns of crop losses to wildlife, and also suggest that areas of high HWC are prone to abandonment. However  few studies evaluate how this works in relation to farmers' individual and collective management decisions about crop selection and crop protection. My case study will hopefuly show that similar to previous studies threat is highest near forests and abandonment is also higher near forests, agricultural land in high threat areas also collectively managed by local communities to reduce potential losses. These patterns  produce dynamic land use patterns that are responsive to wildlife pressures.  While these trends are particularly strong in communities with long, vibrant histories of collective action, I find that even in areas which have not had a strong tradition of collectively managing crops to prevent wildlife-related losses, collective systems are continuously evolving to leverage local and state resources to effectively reduce losses]. These findings suggest that (1) for policy interventions targetting communities facing wildlife threats, it is important to continue to develop not just individual-scale solutions (such as compensation schemes targetting individual households) but also look toward interventions that can work with existing or emergent collective structures, and (2) while the literature primarily focuses on land use change (particularly forest/habitat loss) as a driver of human wildlife conflict, it it worth noting that wildlife also have significant impacts on farmer choices and land cover outcomes. Further, AUs that are more central and further from forests are more intensively farmed, while more distant areas are used more extensively, producing a dynamic zone of interaction. research is required to evaluate how feedbacks between wildlife depredation of crops and farmers' individual and collective decisions about agriculture are mediated through dynamic land use change at fine spatial scales.*** 
-
-Break this down:
-
-1. HWC lit has generally found that ag areas closer to forests and other habitat features are at highest risk of depredation. Does this hold true here?
-- how does threat level correlate with distance to forest and rivers?
-- how do losses correlate with forest and rivers?
-
-2. Is there more abandonment near these features? Is there more abandonment in areas identified as having higher threat levels?
-
-3. But... Do areas with more threat also have more collective action? What else explains AUs with collective management?
-  - I expect that in the first cluster, yes (for threat level 3-4)
-  - at level 5, abandonment is much more likely
-  - also expect this to be related to (following from CA lit), a larger number of people using it, and more people who are ag dependent. 
-  
-4. but... how do relationships with wildlife impact land use patterns? I STILL DON'T KNOW WHAT  QUESTIONS TO ASK HERE? 
-  - What are the land use outcomes I'm interested in? cash crops, area sown, what crops are planted, often were there fallows (maybe)
-  
-  - I expect that areas with high but not severe threat have over time been less intensively used, less area used, and more abandonment. 
-  - but I also expect that they may be more diverse in their crops. 
-  - at the same threat level, being in a village with some collective action increases the likelihood of remaining in use 
-    - of course, this may be correlated with some factor other than wildlife... if the area is marginal to begin with, it might be that abandonment is more likely anyway, and protection of any sort is less likely. this would be a completely expected
-
-  
 
   

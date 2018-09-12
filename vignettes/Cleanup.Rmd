@@ -57,7 +57,65 @@ au$vis.any <- ifelse(( au$vis.settl == 1 | au$vis.other == 1), 1, 0)
 au$max.threat <- apply(au[,c("monkey.threat", "boar.threat", "ung.threat", "other.threat" )], 1, max)
 # visual check:
 cbind(au$monkey.threat, au$boar.threat, au$ung.threat, au$max.threat)
+
+names(au)
 ```
+
+Some exploratory stuff by village:
+* boxplots/histograms for:
+    + travel time, area, 
+* bar graphs for
+    + trend.area, trend.cashcrops, livelhood dependence, threat levels, any shared protection
+    
+* histograms/barplots of distance and area separated by active vs inactive/abandoned
+
+```{r}
+
+#install.packages("colorspace")
+library(colorspace)
+
+par(mfrow = c(1,1))
+# travel time by village
+boxplot(au$travel.time ~ au$villageID)
+
+# area by village
+boxplot(au$AU.area ~ au$villageID)
+boxplot(au$AU.hh ~ au$villageID)
+
+table(au$village)
+## set up villages
+## for loop: for each village, plot x
+
+par(mfrow = c(1, 1))
+for(i in 1:7){
+  au2 <- subset(au, villageID == 2 & type == "active")
+  hist(au2[, 11], main = i, , col = rgb(0, 0, 1, .5))
+}
+
+for(i in 1:7){
+  au2 <- subset(au, villageID == 2 & (type == "underused" | type == "unused" ))
+  hist(au2[, 11], main = i, col = rgb(1, 0, 0, .5), add = T)
+}
+
+for(i in 1:7){
+  au2 <- subset(au, villageID == i, breaks = 10)
+  hist(au2[, 20], add = T)
+}
+
+#for(i in 1:7){
+  # stacked bar plots of max threat, by count and area}
+
+par(mfrow = c(1,1))
+barplot(table(au$max.threat, au$village), col=c("black", "lightgrey", "yellow", "orange", "red", "darkred") , border="white", space=0.04, font.axis=2, xlab="village")
+legend("topright", legend = c(5:0), fill= c("darkred", "red", "orange", "yellow", "lightgrey", "black"), bty = "n")
+
+
+```
+
+
+
+
+
 
 ***  HWC draws attention to spatial patterns of crop losses to wildlife, and also suggest that areas of high HWC are prone to abandonment. However  few studies evaluate how this works in relation to farmers' individual and collective management decisions about crop selection and crop protection. My case study will hopefuly show that similar to previous studies threat is highest near forests and abandonment is also higher near forests, agricultural land in high threat areas also collectively managed by local communities to reduce potential losses. These patterns  produce dynamic land use patterns that are responsive to wildlife pressures.  While these trends are particularly strong in communities with long, vibrant histories of collective action, I find that even in areas which have not had a strong tradition of collectively managing crops to prevent wildlife-related losses, collective systems are continuously evolving to leverage local and state resources to effectively reduce losses]. These findings suggest that (1) for policy interventions targetting communities facing wildlife threats, it is important to continue to develop not just individual-scale solutions (such as compensation schemes targetting individual households) but also look toward interventions that can work with existing or emergent collective structures, and (2) while the literature primarily focuses on land use change (particularly forest/habitat loss) as a driver of human wildlife conflict, it it worth noting that wildlife also have significant impacts on farmer choices and land cover outcomes. Further, AUs that are more central and further from forests are more intensively farmed, while more distant areas are used more extensively, producing a dynamic zone of interaction. research is required to evaluate how feedbacks between wildlife depredation of crops and farmers' individual and collective decisions about agriculture are mediated through dynamic land use change at fine spatial scales.*** 
 

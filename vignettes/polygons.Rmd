@@ -46,15 +46,20 @@ To add:
 Rivers, major roads, settlements, and village boundaries (do this tomorrow)
 maps by:
 
-  - threat level relative within village (high and low)
+
   - current use category (a few need to be modified)
    - number of users
    - live dep
-  - travel time
   - visibility
   - more area cultivated?
   - more intensive use?
+    - travel time
+    - pc area cultivated
+    - if abandoned, number of years
+    
+  
   - threat level max
+    - threat level relative within village (high and low)
   - threat level by species (all together, use rgb alpha) * later
   - any collective monitoring?
   
@@ -63,35 +68,130 @@ maps by:
 
 # livelihood dependence
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
-par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
 for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, liv_dep == 1), col = "blue", add = T)
-  box(lty = 1)
+  box(lty = 1, col = "grey")
+  mtext("Livelihood dependence", side = 3, outer = TRUE)
+  if ( i == 1){
+    legend("bottom", c(">50%", "=<50%"), fill = c("blue","white"), bty = "n")
+  }
+ }
+
+  
+
+## more area cultivated now than 10 years ago
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, trend_area == 1), col = "green", add = T)
+  plot(subset(reg, trend_area == 0), col = "grey", add = T)
+  plot(subset(reg, trend_area == -1), col = "red", add = T)
+  #plot(subset(reg, type == "unused"), col = "black", add = T)
+  box(lty = 1, col = "grey")
+  mtext("Area cultivated compared with 10 yrs ago", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottom", c("Increase", "No change", "Decrease"), fill = c("green", "grey", "red"), bty = "n")
+  }
+}
+#FIX: ERRORS. DEFINITELY DECREASE IN: RACHHIARA, CLOSEST TO RIVER; ROPDI, LUMBER
+
+# More cash crops cultivated now than 10 years ago
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, trend_cash == 1), col = "green", add = T)
+  plot(subset(reg, trend_cash == -1), col = "red", add = T)
+  plot(subset(reg, trend_cash == 0), col = "grey", add = T)
+  #plot(subset(reg, type == "unused"), col = "black", add = T)
+ box(lty = 1, col = "grey")
+  mtext("Cash crop cultivation compared with with 10 yrs ago", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottom", c("Increase", "No change", "Decrease"), fill = c("green", "grey", "red"), bty = "n")
+  }
 }
 
 
-
-cols <- sapply(1:5, function(x){
-  rgb(1, 0, 0, x*.2)
-})
-  
-
+## Majority of area is actively cultivated
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
-par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+ plot(subset(reg, maj_active == 0), col = "darkred", add = T)
+ plot(subset(reg, maj_active == 1), col = "lightgreen", add = T)
+ box(lty = 1, col = "grey")
+  mtext("Majority of area is actively cultivated", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottom", c("yes", "no"), fill = c("lightgreen", "darkred"), 
+         bty = "n")
+  }
+}
 
+```
+  
+  
+  
+Threat level maps
+```{r}
+
+# Overall threat levels
+cols <- sapply(1:5, function(x){
+  rgb(1, 0, 0, (2.5^x)/100)
+})
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
 for(i in 1:3){
   reg <- au[au$region == i, ]
       plot(reg)
       for(j in 1:5){
       plot(subset(reg, max_threat == j), col = cols[j], add = T)
       }
-  box(lty = 1)
+  box(lty = 1, col = "grey")
+  mtext("Maximum wildlife damage/loss threat", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottom", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n")
+  }
 }
-## work on colors
 
 
+## By species THIS NEEDS WORK
+cols_monkey <- sapply(1:5, function(x){
+  rgb(1, 0, 0, (2.5^x)/100)
+})
+cols_boar <- sapply(1:5, function(x){
+  rgb(0, 0, 1, (2.5^x)/100)
+})
+cols_ung <- sapply(1:5, function(x){
+  rgb(1, 1, 0, (2.5^x)/100)
+})
+
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+      plot(reg)
+      for(j in 1:5){
+      plot(subset(reg, monkey_thr == j), col = cols_monkey[j], add = T)
+      plot(subset(reg, boar_threa == j), col = cols_boar[j], add = T)
+      plot(subset(reg, ung_threat == j), col = cols_ung[j], add = T)
+      }
+  box(lty = 1, col = "grey")
+  mtext("Maximum wildlife damage/loss threat", side = 3, outer = TRUE)
+  if ( i == 1){
+    legend(x = 76.927, y = 31.975, c("", "", "", "", ""), fill = rev(cols_monkey), bty = "n")
+    legend(x = 76.929, y = 31.975, c("", "", "", "", ""), fill = rev(cols_boar), bty = "n")
+    legend(x = 76.931, y = 31.975, c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols_ung), bty = "n")
+  }
+   text("M B U", x = 76.9318, y = 31.975, cex = .85)  
+}
+
+?mtext
 ```
-  
   

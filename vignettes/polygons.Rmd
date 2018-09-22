@@ -77,7 +77,14 @@ maps by:
   - threat level by species (all together, use rgb alpha) * later
   - any collective monitoring?
   
+  _____________________________________
   
+  
+General characteristics:
+- livelihood dependnce on agriculture
+- trends in area cutlivated
+- trends in cash crops 
+- pc cropped (summer, 5 yr average)
 ```{r}
 
 # livelihood dependence
@@ -88,7 +95,7 @@ for(i in 1:3){
   plot(reg)
   plot(subset(reg, liv.dep == 1), col = "blue", add = T)
   box(lty = 1, col = "grey")
-  mtext("Livelihood dependence", side = 3, outer = TRUE)
+  mtext("Dependence on agriculture", side = 3, outer = TRUE)
   if ( i == 1){
     legend("bottomright", c(">50%", "=<50%"), fill = c("blue","white"), bty = "n")
   }
@@ -164,7 +171,7 @@ for(i in 1:3){
 
 ```
   
-Borders
+Borders and visibility
 
 ```{r}
 # Borders settlement
@@ -209,35 +216,77 @@ for(i in 1:3){
   }
  }
 
-```
-
-
-  
-  
-  
-Threat level maps
-```{r}
-
-# Overall threat levels
-cols <- sapply(1:5, function(x){
-  rgb(1, 0, 0, (2.5^x)/100)
-})
+# Majority visible from settlement
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
 for(i in 1:3){
   reg <- au[au$region == i, ]
-      plot(reg)
-      for(j in 1:5){
-      plot(subset(reg, max.threat == j), col = cols[j], add = T)
-      }
+  plot(reg)
+  plot(subset(reg, vis.settl == 1), col = "blue", add = T)
   box(lty = 1, col = "grey")
-  mtext("Maximum wildlife damage/loss threat", side = 3, outer = TRUE)
+  mtext("Majority visible from settlement", side = 3, outer = TRUE)
   if ( i == 1){
-  legend("bottom", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n")
+    legend("bottomright", c("y", "n"), fill = c("blue","white"), bty = "n")
   }
 }
 
-################################################
+# Majority visible from area of high traffic
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, vis.any == 1), col = "blue", add = T)
+  box(lty = 1, col = "grey")
+  mtext("Majority isible from settlement or high-traffic area", side = 3, outer = TRUE)
+  if ( i == 1){
+    legend("bottomright", c("y", "n"), fill = c("blue","white"), bty = "n")
+  }
+ }
+
+```
+
+Travel time
+
+```{r}
+# travel time
+cols <- c("#ffffff", "#e6e6ff", "#b3b3ff", "#8080ff", "#4d4dff", "#1a1aff", "#0000b3","#000099", "#00004d", "#00001a")
+
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+plot(subset(reg, travel.time == 0), col = cols[1], add = T)
+ plot(subset(reg, travel.time > 0 & travel.time <= 2 ), col = cols[2], add = T)
+ plot(subset(reg, travel.time > 3 & travel.time <= 5 ), col = cols[3], add = T)
+ plot(subset(reg, travel.time > 5 & travel.time <= 10 ), col = cols[4], add = T)
+ plot(subset(reg, travel.time > 10 & travel.time <= 15 ), col = cols[5], add = T)
+ plot(subset(reg, travel.time > 15 & travel.time <= 20 ), col = cols[6], add = T)
+ plot(subset(reg, travel.time > 20 & travel.time <= 30 ), col = cols[7], add = T)
+ plot(subset(reg, travel.time > 30 & travel.time <= 45 ), col = cols[8], add = T)
+ plot(subset(reg, travel.time > 45 & travel.time <= 60 ), col = cols[9], add = T)
+ plot(subset(reg, travel.time > 60 & travel.time <= 80 ), col = cols[10], add = T)
+  
+ box(lty = 1, col = "grey")
+  mtext("Average travel time (minutes)", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottomright", c("0", "1-2", "3-5", "6-10", "11-15", "16-20", "21-30", "31-45", 
+                     "46-60", "61-80"), fill = c(cols), 
+         bty = "n", cex = .7)
+  }
+}
+
+layout(matrix(1,1))
+par(mar = c(1,1,1,1), oma = c(2, 2, 2, 2))
+hist(dat$travel.time, breaks = 15)
+
+ 
+```
+  
+  
+Threat level
+```{r}
 
 #MONKEY
 cols <- sapply(1:5, function(x){
@@ -297,8 +346,66 @@ for(i in 1:3){
   }
 }
 
+################################################
+
+# Overall threat levels
+cols <- sapply(1:5, function(x){
+  rgb(1, 0, 0, (2.5^x)/100)
+})
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+      plot(reg)
+      for(j in 1:5){
+      plot(subset(reg, max.threat == j), col = cols[j], add = T)
+      }
+  box(lty = 1, col = "grey")
+  mtext("Maximum wildlife damage/loss threat", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottom", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n")
+  }
+}
+
+
+
+
 ```
   
+  
+  
+Monitoring and protection
+```{r}
+# 3rd PARTY
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, monitor.3rd == 1), col = "blue", add = T)
+  box(lty = 1, col = "grey")
+  mtext("3rd party monitoring (any crop in past 2yrs", side = 3, outer = TRUE)
+  if ( i == 1){
+    legend("bottomright", c(">50%", "=<50%"), fill = c("blue","white"), bty = "n")
+  }
+}
+
+# ROTATIONAL/SHARED MONITORING
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, monitor.shared == 1), col = "blue", add = T)
+  box(lty = 1, col = "grey")
+  mtext("shared monitoring (any crop in past 2yrs", side = 3, outer = TRUE)
+  if ( i == 1){
+    legend("bottomright", c(">50%", "=<50%"), fill = c("blue","white"), bty = "n")
+  }
+ }
+
+
+```
   
   
   
@@ -316,7 +423,6 @@ for(i in 1:3){
 JUNK
 ```{r}
 ### all vis combined: this works but it's hella ugly.
-
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
 for(i in 1:3){
@@ -336,11 +442,6 @@ for(i in 1:3){
            pt.cex = 3, bty = "n")
   }
 }
-
-
-
-
-
 
 ### DOESN'T WORK
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
@@ -362,9 +463,6 @@ for(i in 1:3){
   }
    text("M B U", x = 76.9318, y = 31.975, cex = .85)  
 }
-
-
-
 
 ## By species THIS NEEDS WORK
 cols_monkey <- sapply(1:5, function(x){

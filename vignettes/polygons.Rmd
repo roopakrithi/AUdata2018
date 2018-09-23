@@ -16,27 +16,44 @@ editor_options:
 library(sp)
 library(rgdal)
 library(maps)
+library(maptools)
+library(sf)
+library(rgeos)
+#devtools::install_github("eblondel/cleangeo")
+library(cleangeo)
 
 library(devtools)
 library(githubinstall)
 install_github("roopakrithi/AUdata2018", build_vignettes = F)
 
 fl <- system.file("extdata/", package = "AUdata2018") 
-dat <- read.csv("au_data.csv")
+dat <- read.csv(paste0(fl, "au_data.csv"))
 dat <- as.data.frame(dat, stringsAsFactors = F)
 
 
-au <- readOGR(dsn = "/Users/roopa 1/Desktop/Himachal_data/AUdata2018/inst/extdata/au.shp",
-  layer = "au")
+au <- readOGR(dsn = paste0(fl, "au.shp"), layer = "au")
 names(au)
 
 au <- merge(au, dat, by.x = "IDlong", 
                         by.y = "IDlong")
 
+# FIX BROKEN GEOM
+gIsValid(au) ## FALSE
+report <- clgeo_CollectionReport(au)
+clgeo_SummaryReport(report)
+au <- clgeo_Clean(au)
+report.clean <- clgeo_CollectionReport(au)
+clgeo_SummaryReport(au)
+gIsValid(au)
 
 
-
-
+## make polygons with same IDlong into multipart polygons
+#table(au$IDlong)
+#autest <- aggregate(x = au, by = list(au$IDlong), mean)
+#auT <- unionSpatialPolygons(au, au$IDlong)
+#?gUnaryUnion
+#gIsValid(au)
+## there's some overlapping polygons here, and that's a problem. how to resolve?
 
 # plot all AUs
 # including a scale just for this one
@@ -45,12 +62,10 @@ layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
 for(i in 1:3){
   reg <- au[au$region == i, ]
-  plot(reg)
+  plot(reg, col = "blue")
   box(lty = 1)
   map.scale(ratio=F, relwidth=0.3, cex = .4)
 }
-
-
 
 ```
 Not perfect, but reasonable start. Don't spend too much time making this perfect. 
@@ -278,9 +293,9 @@ plot(subset(reg, travel.time == 0), col = cols[1], add = T)
 }
 
 layout(matrix(1,1))
-par(mar = c(1,1,1,1), oma = c(2, 2, 2, 2))
-hist(dat$travel.time, breaks = 15)
-
+par(mar = c(5,1,1,1), oma = c(1, 1, 1, 1))
+hist(dat$travel.time, breaks = 15, main = "travel time", xlab = "minutes")
+?hist
  
 ```
   

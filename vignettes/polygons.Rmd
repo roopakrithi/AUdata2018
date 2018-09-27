@@ -46,14 +46,39 @@ report.clean <- clgeo_CollectionReport(au)
 clgeo_SummaryReport(au)
 gIsValid(au)
 
+### NEED TO FIX ***IMPORTANT: ANYTHING THAT'S IN TWO PARTS, OLD AND NEW*****
+# bada phat
+# kusmdin
+# kathyaan
+## go directly into the csv and change these. just edit the original version to reflect 
+  #what's happening in the whole. KEEP the old one as is. In notes, make sure to note that it's a subpart.
+
+### THEN, do this again:
+# aggregate
+# subset out just IDlong
+# merge with corrected dat
+# write to package (as au2)
+# push all 
+# read in au2 (as au) and proceed as before
 
 ## make polygons with same IDlong into multipart polygons
-#table(au$IDlong)
-#autest <- aggregate(x = au, by = list(au$IDlong), mean)
-#auT <- unionSpatialPolygons(au, au$IDlong)
-#?gUnaryUnion
-#gIsValid(au)
-## there's some overlapping polygons here, and that's a problem. how to resolve?
+au <- aggregate(au, by = list(au$IDlong), FUN = min()) ## BE CAREFUL. I THINK THIS WORKED BUT... CHECK.
+
+# this worked, but it made all text into NAs. so re-merging with dat. 
+au2 <- au[, "IDlong"]
+
+writeOGR(au2, 
+        dsn = "~/Desktop/Himachal_data/AUdata2018/inst/extdata",
+        layer = "au2", driver = "ESRI Shapefile", overwrite_layer = TRUE)
+
+# SAVE, COMMIT, AND PUSH, THEN
+
+au <- readOGR(dsn = paste0(fl, "au2.shp"), layer = "au2")
+
+
+au <- merge(au2, dat, by.x = "IDlong", 
+                        by.y = "IDlong")
+names(au)
 
 # plot all AUs
 # including a scale just for this one
@@ -66,6 +91,16 @@ for(i in 1:3){
   box(lty = 1)
   map.scale(ratio=F, relwidth=0.3, cex = .4)
 }
+
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  spplot(reg, "au$IDlong")
+  box(lty = 1)
+  map.scale(ratio=F, relwidth=0.3, cex = .4)
+}
+
 
 ```
 Not perfect, but reasonable start. Don't spend too much time making this perfect. 
@@ -116,43 +151,6 @@ for(i in 1:3){
   }
  }
 
-
-## more area cultivated now than 10 years ago
-layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
-par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
-for(i in 1:3){
-  reg <- au[au$region == i, ]
-  plot(reg)
-  plot(subset(reg, trend.area == 1), col = "green", add = T)
-  plot(subset(reg, trend.area == 0), col = "grey", add = T)
-  plot(subset(reg, trend.area == -1), col = "red", add = T)
-  plot(subset(reg, inactive.years > 10 & inactive.pc == 100), col = "darkred", add = T)
-  box(lty = 1, col = "grey")
-  mtext("Area cultivated compared with 10 yrs ago", side = 3, outer = TRUE)
-  if ( i == 1){
-  legend("bottomright", c("Increase", "No change", "Decrease", "inactive >10yrs"), fill = c("green", "grey", "red", "darkred"), bty = "n")
-  }
-}
-
-
-# More cash crops cultivated now than 10 years ago
-layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
-par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
-for(i in 1:3){
-  reg <- au[au$region == i, ]
-  plot(reg)
-  plot(subset(reg, trend.cash.crops == 1), col = "green", add = T)
-  plot(subset(reg, trend.cash.crops == -1), col = "red", add = T)
-  plot(subset(reg, trend.cash.crops == 0), col = "grey", add = T)
-  plot(subset(reg, inactive.years > 10 & inactive.pc == 100), col = "darkred", add = T)
-  #plot(subset(reg, type == "unused"), col = "black", add = T)
- box(lty = 1, col = "grey")
-  mtext("Cash crop cultivation compared with with 10 yrs ago", side = 3, outer = TRUE)
-  if ( i == 1){
-  legend("bottomright", c("Increase", "No change", "Decrease", "inactive >10yrs"), fill = c("green", "grey", "red", "darkred"), bty = "n")
-  }
-}
-
 # pc cropped summer
 cols <- c("#ffffff", "#e6ffe6", "#ccffcc", "#99ff99", "#66ff66", "#1aff1a", "#00e600", "#00b300",
   "#008000", "#004d00", "#003300")
@@ -182,6 +180,41 @@ for(i in 1:3){
   }
 }
 
+## more area cultivated now than 10 years ago
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, trend.area == 1), col = "green", add = T)
+  plot(subset(reg, trend.area == 0), col = "grey", add = T)
+  plot(subset(reg, trend.area == -1), col = "red", add = T)
+  plot(subset(reg, inactive.years > 10 & inactive.pc == 100), col = "darkred", add = T)
+  box(lty = 1, col = "grey")
+  mtext("Area cultivated now vs. 10 yrs ago", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottomright", c("Increase", "No change", "Decrease", "inactive >10yrs"), fill = c("green", "grey", "red", "darkred"), bty = "n")
+  }
+}
+
+
+# More cash crops cultivated now than 10 years ago
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, trend.cash.crops == 1), col = "green", add = T)
+  plot(subset(reg, trend.cash.crops == -1), col = "red", add = T)
+  plot(subset(reg, trend.cash.crops == 0), col = "grey", add = T)
+  plot(subset(reg, inactive.years > 10 & inactive.pc == 100), col = "darkred", add = T)
+  #plot(subset(reg, type == "unused"), col = "black", add = T)
+ box(lty = 1, col = "grey")
+  mtext("Cash crop cultivation now vs. 10 yrs ago", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottomright", c("Increase", "No change", "Decrease", "inactive >10yrs"), fill = c("green", "grey", "red", "darkred"), bty = "n")
+  }
+}
 
 
 ```
@@ -253,7 +286,7 @@ for(i in 1:3){
   plot(reg)
   plot(subset(reg, vis.any == 1), col = "blue", add = T)
   box(lty = 1, col = "grey")
-  mtext("Majority isible from settlement or high-traffic area", side = 3, outer = TRUE)
+  mtext("Majority visible from settlement or high-traffic area", side = 3, outer = TRUE)
   if ( i == 1){
     legend("bottomright", c("y", "n"), fill = c("blue","white"), bty = "n")
   }
@@ -295,7 +328,7 @@ plot(subset(reg, travel.time == 0), col = cols[1], add = T)
 layout(matrix(1,1))
 par(mar = c(5,1,1,1), oma = c(1, 1, 1, 1))
 hist(dat$travel.time, breaks = 15, main = "travel time", xlab = "minutes")
-?hist
+
  
 ```
   

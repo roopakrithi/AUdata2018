@@ -30,53 +30,9 @@ fl <- system.file("extdata/", package = "AUdata2018")
 dat <- read.csv(paste0(fl, "au_data.csv"))
 dat <- as.data.frame(dat, stringsAsFactors = F)
 
-
-au <- readOGR(dsn = paste0(fl, "au.shp"), layer = "au")
-names(au)
+au <- readOGR(dsn = paste0(fl, "au_agg.shp"), layer = "au_agg")
 
 au <- merge(au, dat, by.x = "IDlong", 
-                        by.y = "IDlong")
-
-# FIX BROKEN GEOM
-gIsValid(au) ## FALSE
-report <- clgeo_CollectionReport(au)
-clgeo_SummaryReport(report)
-au <- clgeo_Clean(au)
-report.clean <- clgeo_CollectionReport(au)
-clgeo_SummaryReport(au)
-gIsValid(au)
-
-### NEED TO FIX ***IMPORTANT: ANYTHING THAT'S IN TWO PARTS, OLD AND NEW*****
-# bada phat
-# kusmdin
-# kathyaan
-## go directly into the csv and change these. just edit the original version to reflect 
-  #what's happening in the whole. KEEP the old one as is. In notes, make sure to note that it's a subpart.
-
-### THEN, do this again:
-# aggregate
-# subset out just IDlong
-# merge with corrected dat
-# write to package (as au2)
-# push all 
-# read in au2 (as au) and proceed as before
-
-## make polygons with same IDlong into multipart polygons
-au <- aggregate(au, by = list(au$IDlong), FUN = min()) ## BE CAREFUL. I THINK THIS WORKED BUT... CHECK.
-
-# this worked, but it made all text into NAs. so re-merging with dat. 
-au2 <- au[, "IDlong"]
-
-writeOGR(au2, 
-        dsn = "~/Desktop/Himachal_data/AUdata2018/inst/extdata",
-        layer = "au2", driver = "ESRI Shapefile", overwrite_layer = TRUE)
-
-# SAVE, COMMIT, AND PUSH, THEN
-
-au <- readOGR(dsn = paste0(fl, "au2.shp"), layer = "au2")
-
-
-au <- merge(au2, dat, by.x = "IDlong", 
                         by.y = "IDlong")
 names(au)
 
@@ -87,23 +43,26 @@ layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
 for(i in 1:3){
   reg <- au[au$region == i, ]
-  plot(reg, col = "blue")
+  plot(reg, col = "green")
   box(lty = 1)
   map.scale(ratio=F, relwidth=0.3, cex = .4)
 }
 
+
+## check region 1
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
-for(i in 1:3){
-  reg <- au[au$region == i, ]
-  spplot(reg, "au$IDlong")
-  box(lty = 1)
-  map.scale(ratio=F, relwidth=0.3, cex = .4)
-}
+  reg <- au[au$region == 1, ]
+  spplot(reg, "AU.area")
 
+
+inact <- subset(au, inactive.pc == 100)
+active <- subset(au, inactive.pc < 100)  
 
 ```
+
 Not perfect, but reasonable start. Don't spend too much time making this perfect. 
+
 
 
 To add:
@@ -130,12 +89,14 @@ maps by:
   _____________________________________
   
   
-General characteristics:
+# General characteristics 
+
 - livelihood dependnce on agriculture
 - trends in area cutlivated
 - trends in cash crops 
 - pc cropped (summer, 5 yr average)
-```{r}
+
+```{r livdep}
 
 # livelihood dependence
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
@@ -149,8 +110,12 @@ for(i in 1:3){
   if ( i == 1){
     legend("bottomright", c(">50%", "=<50%"), fill = c("blue","white"), bty = "n")
   }
- }
+}
+```
 
+
+
+```{r pc.summer}
 # pc cropped summer
 cols <- c("#ffffff", "#e6ffe6", "#ccffcc", "#99ff99", "#66ff66", "#1aff1a", "#00e600", "#00b300",
   "#008000", "#004d00", "#003300")
@@ -172,7 +137,7 @@ for(i in 1:3){
  plot(subset(reg, pc.cropped.summer > 90 & pc.cropped.summer <= 100 ), col = cols[10], add = T)
   plot(subset(reg, pc.cropped.summer == 0), col = "darkred", add = T)
  box(lty = 1, col = "grey")
-  mtext("% area cultivated (5yr average)", side = 3, outer = TRUE)
+  mtext("% area cultivated (5yr summer average)", side = 3, outer = TRUE)
   if ( i == 1){
   legend("bottomright", c("none", "1-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", 
                      "71-80", "81-90", "91-100"), fill = c("darkred", cols), 
@@ -180,6 +145,43 @@ for(i in 1:3){
   }
 }
 
+
+```
+
+
+```{r pc.winter}
+# pc cropped winter
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+ plot(subset(reg, pc.cropped.winter > 0 & pc.cropped.winter <= 10 ), col = cols[1], add = T)
+ plot(subset(reg, pc.cropped.winter > 10 & pc.cropped.winter <= 20 ), col = cols[2], add = T)
+ plot(subset(reg, pc.cropped.winter > 20 & pc.cropped.winter <= 30 ), col = cols[3], add = T)
+ plot(subset(reg, pc.cropped.winter > 30 & pc.cropped.winter <= 40 ), col = cols[4], add = T)
+ plot(subset(reg, pc.cropped.winter > 40 & pc.cropped.winter <= 50 ), col = cols[5], add = T)
+ plot(subset(reg, pc.cropped.winter > 50 & pc.cropped.winter <= 60 ), col = cols[6], add = T)
+ plot(subset(reg, pc.cropped.winter > 60 & pc.cropped.winter <= 70 ), col = cols[7], add = T)
+ plot(subset(reg, pc.cropped.winter > 70 & pc.cropped.winter <= 80 ), col = cols[8], add = T)
+ plot(subset(reg, pc.cropped.winter > 80 & pc.cropped.winter <= 90 ), col = cols[9], add = T)
+ plot(subset(reg, pc.cropped.winter > 90 & pc.cropped.winter <= 100 ), col = cols[10], add = T)
+  plot(subset(reg, pc.cropped.winter == 0), col = "darkred", add = T)
+ box(lty = 1, col = "grey")
+  mtext("% area cultivated (5yr winter average)", side = 3, outer = TRUE)
+  if ( i == 1){
+  legend("bottomright", c("none", "1-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", 
+                     "71-80", "81-90", "91-100"), fill = c("darkred", cols), 
+         bty = "n", cex = .7)
+  }
+}
+
+
+
+```
+
+
+```{r trend.area}
 ## more area cultivated now than 10 years ago
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -197,7 +199,10 @@ for(i in 1:3){
   }
 }
 
+```
 
+
+```{r trend.cash.crops}
 # More cash crops cultivated now than 10 years ago
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -216,12 +221,11 @@ for(i in 1:3){
   }
 }
 
-
 ```
   
-Borders and visibility
+# Borders and visibility
 
-```{r}
+```{r borders.settl}
 # Borders settlement
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -236,6 +240,11 @@ for(i in 1:3){
   }
  }
 
+
+```
+
+
+```{r borders.water}
 # Borders water
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -250,6 +259,11 @@ for(i in 1:3){
   }
  }
 
+
+```
+
+
+```{r borders.forest}
 # Borders forest
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -263,6 +277,12 @@ for(i in 1:3){
     legend("bottomright", c("y", "n"), fill = c("blue","white"), bty = "n")
   }
  }
+
+
+```
+
+
+```{r vis.settl}
 
 # Majority visible from settlement
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
@@ -278,7 +298,12 @@ for(i in 1:3){
   }
 }
 
-# Majority visible from area of high traffic
+
+```
+
+```{r vis.any}
+
+# Majority visible from settlement or area of high traffic
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
 for(i in 1:3){
@@ -294,9 +319,9 @@ for(i in 1:3){
 
 ```
 
-Travel time
+# Travel time
 
-```{r}
+```{r travel.time}
 # travel time
 cols <- c("#ffffff", "#e6e6ff", "#b3b3ff", "#8080ff", "#4d4dff", "#1a1aff", "#0000b3","#000099", "#00004d", "#00001a")
 
@@ -329,12 +354,17 @@ layout(matrix(1,1))
 par(mar = c(5,1,1,1), oma = c(1, 1, 1, 1))
 hist(dat$travel.time, breaks = 15, main = "travel time", xlab = "minutes")
 
+
+hist(active$travel.time, breaks = 15, main = "travel time", xlab = "minutes")
+hist(inact$travel.time, breaks = 15, add= T, border = "red")
+
+names(au)
  
 ```
   
   
-Threat level
-```{r}
+# Threat level
+```{r monkey.theat}
 
 #MONKEY
 cols <- sapply(1:5, function(x){
@@ -355,6 +385,10 @@ for(i in 1:3){
   }
 }
 
+```
+
+
+```{r boar.threat}
 #BOAR
 cols <- sapply(1:5, function(x){
   rgb(1, 0, 0, (2.5^x)/100)
@@ -373,7 +407,10 @@ for(i in 1:3){
   legend("bottom", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n")
   }
 }
+```
 
+
+```{r ung.threat}
 
 #UNGULATE
 cols <- sapply(1:5, function(x){
@@ -394,8 +431,10 @@ for(i in 1:3){
   }
 }
 
-################################################
 
+```
+
+```{r max.threat}
 # Overall threat levels
 cols <- sapply(1:5, function(x){
   rgb(1, 0, 0, (2.5^x)/100)
@@ -416,14 +455,10 @@ for(i in 1:3){
 }
 
 
-
-
 ```
   
-  
-  
-Monitoring and protection
-```{r}
+# Monitoring and protection
+```{r 3rd.party}
 # 3rd PARTY
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -437,6 +472,12 @@ for(i in 1:3){
     legend("bottomright", c(">50%", "=<50%"), fill = c("blue","white"), bty = "n")
   }
 }
+
+
+```
+
+
+```{r monitor.shared}
 
 # ROTATIONAL/SHARED MONITORING
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))

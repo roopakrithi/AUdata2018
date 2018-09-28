@@ -37,32 +37,47 @@ au <- merge(au, dat, by.x = "IDlong",
                         by.y = "IDlong")
 names(au)
 
+rr <- readOGR(dsn = paste0(fl, "rivers_roads.shp"), layer = "rivers_roads")
+# Symbol IDs: 0 = minor road/path; 1 = major road; 2 = minor stream; 3 = river
+
+
+sett <- readOGR(dsn = paste0(fl, "settlements.shp"), layer = "settlements")
+
+## a function to make it easier to add aux layers to all the maps
+plot.sett <- function(x){
+  plot(x, col = "yellow", border = rgb(1, 1, 0, .9), add = T)
+}
+
+plot.rr <- function(x){
+  plot(subset(rr, SymbolID == 0), col = "orange", cex = 1.2, add = T)
+  plot(subset(rr, SymbolID == 1), col = "orange", cex = .8, add = T)
+  plot(subset(rr, SymbolID == 2), col = "cyan2", cex = 1.2, add = T)
+  plot(subset(rr, SymbolID == 3), col = "cyan1", cex = .8, add = T)  
+}
+
+# using plot.sett(sett) will add settlements; plot.rr(rr) will add roads, rivers
+
 # plot all AUs ## TEST
 # including a scale just for this one
 ### FIX so scales aren't terrible
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
-par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
+par(mar = c(0, 0, 0, 0), oma = c(1, 0, 1, 0))
 for(i in 1:3){
   reg <- au[au$region == i, ]
-  plot(reg, col = "green")
+  plot(reg, col = "brown")
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1)
-  map.scale(ratio=F, relwidth=0.3, cex = .4)
+  map.scale(ratio=F, relwidth=0.3, cex = .4, metric = T)
 }
-
-
-## check region 1
-layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
-par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
-  reg <- au[au$region == 1, ]
-  spplot(reg, "AU.area")
-
-
-inact <- subset(au, inactive.pc == 100)
-active <- subset(au, inactive.pc < 100)  
 
 ## add area variable
 
 au$calc.area <- area(au)
+
+
+inact <- subset(au, inactive.pc == 100)
+active <- subset(au, inactive.pc < 100)  
 
 
 ```
@@ -111,6 +126,8 @@ for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, liv.dep == 1), col = "blue", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Dependence on agriculture", side = 3, outer = TRUE)
   if ( i == 1){
@@ -141,7 +158,9 @@ for(i in 1:3){
  plot(subset(reg, pc.cropped.summer > 70 & pc.cropped.summer <= 80 ), col = cols[8], add = T)
  plot(subset(reg, pc.cropped.summer > 80 & pc.cropped.summer <= 90 ), col = cols[9], add = T)
  plot(subset(reg, pc.cropped.summer > 90 & pc.cropped.summer <= 100 ), col = cols[10], add = T)
-  plot(subset(reg, pc.cropped.summer == 0), col = "darkred", add = T)
+ plot(subset(reg, pc.cropped.summer == 0), col = "darkred", add = T)
+ plot.sett(sett)
+  plot.rr(rr)
  box(lty = 1, col = "grey")
   mtext("% area cultivated (5yr summer average)", side = 3, outer = TRUE)
   if ( i == 1){
@@ -173,6 +192,8 @@ for(i in 1:3){
  plot(subset(reg, pc.cropped.winter > 80 & pc.cropped.winter <= 90 ), col = cols[9], add = T)
  plot(subset(reg, pc.cropped.winter > 90 & pc.cropped.winter <= 100 ), col = cols[10], add = T)
   plot(subset(reg, pc.cropped.winter == 0), col = "darkred", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
  box(lty = 1, col = "grey")
   mtext("% area cultivated (5yr winter average)", side = 3, outer = TRUE)
   if ( i == 1){
@@ -198,6 +219,8 @@ for(i in 1:3){
   plot(subset(reg, trend.area == 0), col = "grey", add = T)
   plot(subset(reg, trend.area == -1), col = "red", add = T)
   plot(subset(reg, inactive.years > 10 & inactive.pc == 100), col = "darkred", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Area cultivated now vs. 10 yrs ago", side = 3, outer = TRUE)
   if ( i == 1){
@@ -219,6 +242,8 @@ for(i in 1:3){
   plot(subset(reg, trend.cash.crops == -1), col = "red", add = T)
   plot(subset(reg, trend.cash.crops == 0), col = "grey", add = T)
   plot(subset(reg, inactive.years > 10 & inactive.pc == 100), col = "darkred", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   #plot(subset(reg, type == "unused"), col = "black", add = T)
  box(lty = 1, col = "grey")
   mtext("Cash crop cultivation now vs. 10 yrs ago", side = 3, outer = TRUE)
@@ -239,6 +264,8 @@ for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, borders.settl == 1), col = "blue", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Borders settlement", side = 3, outer = TRUE)
   if ( i == 1){
@@ -258,6 +285,8 @@ for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, borders.water == 1), col = "blue", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Borders water", side = 3, outer = TRUE)
   if ( i == 1){
@@ -277,6 +306,8 @@ for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, borders.forest == 1), col = "blue", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Borders forest", side = 3, outer = TRUE)
   if ( i == 1){
@@ -297,6 +328,8 @@ for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, vis.settl == 1), col = "blue", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Majority visible from settlement", side = 3, outer = TRUE)
   if ( i == 1){
@@ -316,6 +349,8 @@ for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, vis.any == 1), col = "blue", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Majority visible from settlement or high-traffic area", side = 3, outer = TRUE)
   if ( i == 1){
@@ -346,7 +381,8 @@ plot(subset(reg, travel.time == 0), col = cols[1], add = T)
  plot(subset(reg, travel.time > 30 & travel.time <= 45 ), col = cols[8], add = T)
  plot(subset(reg, travel.time > 45 & travel.time <= 60 ), col = cols[9], add = T)
  plot(subset(reg, travel.time > 60 & travel.time <= 80 ), col = cols[10], add = T)
-  
+  plot.sett(sett)
+  plot.rr(rr)
  box(lty = 1, col = "grey")
   mtext("Average travel time (minutes)", side = 3, outer = TRUE)
   if ( i == 1){
@@ -384,6 +420,8 @@ for(i in 1:3){
       for(j in 1:5){
       plot(subset(reg, monkey.threat == j), col = cols[j], add = T)
       }
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Monkey damage/loss threat", side = 3, outer = TRUE)
   if ( i == 1){
@@ -407,6 +445,8 @@ for(i in 1:3){
       for(j in 1:5){
       plot(subset(reg, boar.threat == j), col = cols[j], add = T)
       }
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Boar damage/loss threat", side = 3, outer = TRUE)
   if ( i == 1){
@@ -430,6 +470,8 @@ for(i in 1:3){
       for(j in 1:5){
       plot(subset(reg, ung.threat == j), col = cols[j], add = T)
       }
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Ungulate damage/loss threat", side = 3, outer = TRUE)
   if ( i == 1){
@@ -453,6 +495,8 @@ for(i in 1:3){
       for(j in 1:5){
       plot(subset(reg, max.threat == j), col = cols[j], add = T)
       }
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("Maximum wildlife damage/loss threat", side = 3, outer = TRUE)
   if ( i == 1){
@@ -472,6 +516,8 @@ for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, monitor.3rd == 1), col = "blue", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("3rd party monitoring (any crop in past 2yrs", side = 3, outer = TRUE)
   if ( i == 1){
@@ -492,6 +538,8 @@ for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
   plot(subset(reg, monitor.shared == 1), col = "blue", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
   box(lty = 1, col = "grey")
   mtext("shared monitoring (any crop in past 2yrs", side = 3, outer = TRUE)
   if ( i == 1){

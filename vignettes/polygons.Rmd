@@ -17,6 +17,7 @@ library(sp)
 library(rgdal)
 library(maps)
 library(maptools)
+library(raster)
 library(sf)
 library(rgeos)
 #devtools::install_github("eblondel/cleangeo")
@@ -36,7 +37,7 @@ au <- merge(au, dat, by.x = "IDlong",
                         by.y = "IDlong")
 names(au)
 
-# plot all AUs
+# plot all AUs ## TEST
 # including a scale just for this one
 ### FIX so scales aren't terrible
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
@@ -58,6 +59,11 @@ par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
 
 inact <- subset(au, inactive.pc == 100)
 active <- subset(au, inactive.pc < 100)  
+
+## add area variable
+
+au$calc.area <- area(au)
+
 
 ```
 
@@ -493,10 +499,22 @@ for(i in 1:3){
   }
  }
 
-
 ```
   
   
+```{r}
+proj4string(au)
+
+att <- data.frame(au)
+
+vnames <- c("Gr", "BB", "Dh", "Sp", "Ra", "Su", "Ro")
+
+layout(matrix(c(1,1), 1, 1))
+par(mar = c(1, 1, 1, 1), oma = c(2, 3, 2, 0))
+barplot(tapply(att$calc, att$villageID, function(x){sum(x)/1000}), las = 1,
+               names.arg = c("Gr", "BB", "Dh", "Sp", "Ra", "Su", "Ro"))
+
+```
   
   
   

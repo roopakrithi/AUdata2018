@@ -11,7 +11,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r setup}
+```{r setup, fig.width = 7.5, fig.height= 5}
 
 library(sp)
 library(rgdal)
@@ -35,7 +35,7 @@ au <- readOGR(dsn = paste0(fl, "au_agg.shp"), layer = "au_agg")
 
 au <- merge(au, dat, by.x = "IDlong", 
                         by.y = "IDlong")
-names(au)
+# names(au)
 
 rr <- readOGR(dsn = paste0(fl, "rivers_roads.shp"), layer = "rivers_roads")
 # Symbol IDs: 0 = minor road/path; 1 = major road; 2 = minor stream; 3 = river
@@ -77,8 +77,13 @@ au$calc.area <- area(au)
 
 
 inact <- subset(au, inactive.pc == 100)
-active <- subset(au, inactive.pc < 100)  
+active <- subset(au, inactive.pc < 100) 
 
+
+
+au$active <- ifelse(au$inactive.pc == 100, "inactive", "active")
+
+?which
 
 ```
 
@@ -117,7 +122,7 @@ maps by:
 - trends in cash crops 
 - pc cropped (summer, 5 yr average)
 
-```{r livdep}
+```{r livdep, fig.width = 7.5, fig.height= 5}
 
 # livelihood dependence
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
@@ -138,7 +143,7 @@ for(i in 1:3){
 
 
 
-```{r pc.summer}
+```{r pc.summer, fig.width = 7.5, fig.height= 5}
 # pc cropped summer
 cols <- c("#ffffff", "#e6ffe6", "#ccffcc", "#99ff99", "#66ff66", "#1aff1a", "#00e600", "#00b300",
   "#008000", "#004d00", "#003300")
@@ -162,7 +167,7 @@ for(i in 1:3){
  plot.sett(sett)
   plot.rr(rr)
  box(lty = 1, col = "grey")
-  mtext("% area cultivated (5yr summer average)", side = 3, outer = TRUE)
+  mtext("% area sown (5yr summer average)", side = 3, outer = TRUE)
   if ( i == 1){
   legend("bottomright", c("none", "1-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", 
                      "71-80", "81-90", "91-100"), fill = c("darkred", cols), 
@@ -174,7 +179,7 @@ for(i in 1:3){
 ```
 
 
-```{r pc.winter}
+```{r pc.winter, fig.width = 7.5, fig.height= 5}
 # pc cropped winter
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -195,7 +200,7 @@ for(i in 1:3){
   plot.sett(sett)
   plot.rr(rr)
  box(lty = 1, col = "grey")
-  mtext("% area cultivated (5yr winter average)", side = 3, outer = TRUE)
+  mtext("% area sown (5yr winter average)", side = 3, outer = TRUE)
   if ( i == 1){
   legend("bottomright", c("none", "1-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", 
                      "71-80", "81-90", "91-100"), fill = c("darkred", cols), 
@@ -208,7 +213,7 @@ for(i in 1:3){
 ```
 
 
-```{r trend.area}
+```{r trend.area, fig.width = 7.5, fig.height= 5}
 ## more area cultivated now than 10 years ago
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -222,7 +227,7 @@ for(i in 1:3){
   plot.sett(sett)
   plot.rr(rr)
   box(lty = 1, col = "grey")
-  mtext("Area cultivated now vs. 10 yrs ago", side = 3, outer = TRUE)
+  mtext("Area sown now vs. 10 yrs ago", side = 3, outer = TRUE)
   if ( i == 1){
   legend("bottomright", c("Increase", "No change", "Decrease", "inactive >10yrs"), fill = c("green", "grey", "red", "darkred"), bty = "n")
   }
@@ -231,7 +236,7 @@ for(i in 1:3){
 ```
 
 
-```{r trend.cash.crops}
+```{r trend.cash.crops, fig.width = 7.5, fig.height= 5}
 # More cash crops cultivated now than 10 years ago
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -256,7 +261,7 @@ for(i in 1:3){
   
 # Borders and visibility
 
-```{r borders.settl}
+```{r borders.settl, fig.width = 7.5, fig.height= 5}
 # Borders settlement
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -277,7 +282,7 @@ for(i in 1:3){
 ```
 
 
-```{r borders.water}
+```{r borders.water, fig.width = 7.5, fig.height= 5}
 # Borders water
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -298,7 +303,7 @@ for(i in 1:3){
 ```
 
 
-```{r borders.forest}
+```{r borders.forest, fig.width = 7.5, fig.height= 5}
 # Borders forest
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -319,7 +324,7 @@ for(i in 1:3){
 ```
 
 
-```{r vis.settl}
+```{r vis.settl, fig.width = 7.5, fig.height= 5}
 
 # Majority visible from settlement
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
@@ -340,7 +345,7 @@ for(i in 1:3){
 
 ```
 
-```{r vis.any}
+```{r vis.any, fig.width = 7.5, fig.height= 5}
 
 # Majority visible from settlement or area of high traffic
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
@@ -362,7 +367,7 @@ for(i in 1:3){
 
 # Travel time
 
-```{r travel.time}
+```{r travel.time, fig.width = 7.5, fig.height= 5}
 # travel time
 cols <- c("#ffffff", "#e6e6ff", "#b3b3ff", "#8080ff", "#4d4dff", "#1a1aff", "#0000b3","#000099", "#00004d", "#00001a")
 
@@ -400,13 +405,15 @@ hist(dat$travel.time, breaks = 15, main = "travel time", xlab = "minutes")
 hist(active$travel.time, breaks = 15, main = "travel time", xlab = "minutes")
 hist(inact$travel.time, breaks = 15, add= T, border = "red")
 
+boxplot(au$travel.time ~ au$active, main = "travel time", xlab = "minutes")
+tapply(au$travel.time, au$active, median)
 names(au)
  
 ```
   
   
 # Threat level
-```{r monkey.theat}
+```{r monkey.theat, fig.width = 7.5, fig.height= 5}
 
 #MONKEY
 cols <- sapply(1:5, function(x){
@@ -432,7 +439,7 @@ for(i in 1:3){
 ```
 
 
-```{r boar.threat}
+```{r boar.threat, fig.width = 7.5, fig.height= 5}
 #BOAR
 cols <- sapply(1:5, function(x){
   rgb(1, 0, 0, (2.5^x)/100)
@@ -456,7 +463,7 @@ for(i in 1:3){
 ```
 
 
-```{r ung.threat}
+```{r ung.threat, fig.width = 7.5, fig.height= 5}
 
 #UNGULATE
 cols <- sapply(1:5, function(x){
@@ -475,14 +482,14 @@ for(i in 1:3){
   box(lty = 1, col = "grey")
   mtext("Ungulate damage/loss threat", side = 3, outer = TRUE)
   if ( i == 1){
-  legend("bottom", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n")
+  legend("bottomright", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n")
   }
 }
 
 
 ```
 
-```{r max.threat}
+```{r max.threat, fig.width = 7.5, fig.height= 5}
 # Overall threat levels
 cols <- sapply(1:5, function(x){
   rgb(1, 0, 0, (2.5^x)/100)
@@ -500,7 +507,7 @@ for(i in 1:3){
   box(lty = 1, col = "grey")
   mtext("Maximum wildlife damage/loss threat", side = 3, outer = TRUE)
   if ( i == 1){
-  legend("bottom", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n")
+  legend("bottomright", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n")
   }
 }
 
@@ -508,7 +515,7 @@ for(i in 1:3){
 ```
   
 # Monitoring and protection
-```{r 3rd.party}
+```{r 3rd.party, fig.width = 7.5, fig.height= 5}
 # 3rd PARTY
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -529,7 +536,7 @@ for(i in 1:3){
 ```
 
 
-```{r monitor.shared}
+```{r monitor.shared, fig.width = 7.5, fig.height= 5}
 
 # ROTATIONAL/SHARED MONITORING
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
@@ -549,8 +556,19 @@ for(i in 1:3){
 
 ```
   
+I want relative within-village threat
+- find median threat value for each village (tapply)
+- anything assign "high" and "low" based on median
+- map
+
+
+bivariate tables of:
+- village-level threat vs use category (abandoned, under 50% used, >50% used)
+- travel distance vs. use category (maybe as x-y plots)
   
-```{r}
+  
+  
+```{r, fig.width = 7.5, fig.height= 5}
 proj4string(au)
 
 att <- data.frame(au)
@@ -576,7 +594,7 @@ barplot(tapply(att$calc, att$villageID, function(x){sum(x)/1000}), las = 1,
   
   
 JUNK
-```{r}
+```{r junk, eval = F}
 ### all vis combined: this works but it's hella ugly.
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))

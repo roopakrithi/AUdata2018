@@ -11,32 +11,94 @@ editor_options:
   chunk_output_type: console
 ---
 
-install package. Add data. Check to make sure it's clean.
+Cleanup: started with a shapefile that had:
+- broken geometries
+- polygons that had the same IDlong, which I wanted to be multipart polygons
+- edited au to au_agg, which is the dataset to use for all future analyses.
 ```{r}
+
+library(sp)
+library(rgdal)
+library(maps)
+library(maptools)
+library(sf)
+library(rgeos)
+#devtools::install_github("eblondel/cleangeo")
+library(cleangeo)
+
 library(devtools)
 library(githubinstall)
 install_github("roopakrithi/AUdata2018", build_vignettes = F)
 
-fl <- system.file("extdata/", package = "AUdata2018") 
-au <- read.csv(paste0(fl, "AU_data_AU_2018-08-15.csv"))
-au <- as.data.frame(au, stringsAsFactors = F)
 
-#Are the crops correct (since I used names instead of codes, 
-  #want to check for spelling errors etc.)
-crops <- as.vector(as.matrix(au[,29:44]))
-table(crops)
-# looks fine.
+fl <- system.file("extdata/", package = "AUdata2018") 
+dat <- read.csv(paste0(fl, "au_data.csv"))
+dat <- as.data.frame(dat, stringsAsFactors = F)
+
+
+#au <- readOGR(dsn = paste0(fl, "au.shp"), layer = "au")
+#names(au)
+
+au <- readOGR(dsn = paste0(fl, "au3.shp"), layer = "au3")
+names(au3)
+
+au <- merge(au, dat, by.x = "IDlong", 
+                        by.y = "IDlong")
+
+# FIX BROKEN GEOM
+gIsValid(au) ## FALSE
+report <- clgeo_CollectionReport(au)
+clgeo_SummaryReport(report)
+au <- clgeo_Clean(au)
+report.clean <- clgeo_CollectionReport(au)
+clgeo_SummaryReport(au)
+gIsValid(au)
+
+## make polygons with same IDlong into multipart polygons
+au <- aggregate(au, by = list(au$IDlong), FUN = mean) 
+
+# this worked, but it made all text into NAs. so re-merging with dat. 
+au_agg <- au[, "IDlong"]
+
+writeOGR(au_agg, 
+        dsn = "~/Desktop/Himachal_data/AUdata2018/inst/extdata",
+        layer = "au_agg", driver = "ESRI Shapefile", overwrite_layer = TRUE)
+
+
 
 ```
+
+
+check aux data
+
+```{r}
+fl2 <- "~/Desktop/Himachal_data/AUdata2018/inst/SCRATCH/"
+rivers_roads <- readOGR(dsn = paste0(fl2, "rivers_roads.shp"), layer = "rivers_roads")
+
+settlements <- readOGR(dsn = paste0(fl2, "settlements.shp"), layer = "settlements")
+
+writeOGR(rivers_roads, 
+        dsn = "~/Desktop/Himachal_data/AUdata2018/inst/extdata",
+        layer = "rivers_roads", driver = "ESRI Shapefile", overwrite_layer = TRUE)
+
+writeOGR(settlements, 
+        dsn = "~/Desktop/Himachal_data/AUdata2018/inst/extdata",
+        layer = "settlements", driver = "ESRI Shapefile", overwrite_layer = TRUE)
+
+
+
+
+```
+
+
+
+
 
 Start looking at the data:
 
 ```{r}
 
-# list of most useful variables
-# vars <- c(1, 20, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 22, 25, 26, 18, 68, 91)
-
-au[is.na(au)] <- 0
+dat[is.na(dat)] <- 0
 ## be careful, there are a few variables where NA =/= 0
 
 ```
@@ -45,20 +107,20 @@ au[is.na(au)] <- 0
 A few new variables
 ```{r}
 # squared travel time
-au$tt2 <- (au$travel.time)^2
+dat$tt2 <- (dat$travel.time)^2
 
 # visible from village OR major thoroughfare 
-au$vis.any <- 0 #don't actually need this
-au$vis.any <- ifelse(( au$vis.settl == 1 | au$vis.other == 1), 1, 0)
+dat$vis.any <- 0 #don't actually need this
+dat$vis.any <- ifelse(( dat$vis.settl == 1 | dat$vis.other == 1), 1, 0)
 # visual check:
-#cbind(au$vis.settl, au$vis.other,  au$vis.any)
+#cbind(dat$vis.settl, dat$vis.other,  dat$vis.any)
 
 # higest severity for any species
-au$max.threat <- apply(au[,c("monkey.threat", "boar.threat", "ung.threat", "other.threat" )], 1, max)
+dat$max.threat <- apply(dat[,c("monkey.threat", "boar.threat", "ung.threat", "other.threat" )], 1, max)
 # visual check:
-cbind(au$monkey.threat, au$boar.threat, au$ung.threat, au$max.threat)
+cbind(dat$monkey.threat, dat$boar.threat, dat$ung.threat, dat$max.threat)
 
-names(au)
+names(dat)
 ```
 
 Some exploratory stuff by village:
@@ -74,40 +136,29 @@ Some exploratory stuff by village:
 #install.packages("colorspace")
 library(colorspace)
 
-par(mfrow = c(1,1))
-# travel time by village
-boxplot(au$travel.time ~ au$villageID)
+vnames <- c("Gr", "BB", "Dh", "Sp", "Ra", "Su", "Ro")
+
+par(mfrow = c(1,1), mar = c(1, 1, 1, 1), oma = c(3, 2, 2, 0))
+# travel time to AU, by village
+boxplot(dat$travel.time ~ dat$villageID, las = 1, boxwex= .8,
+        names = vnames,
+        main = "Travel time to AU")
 
 # area by village
-boxplot(au$AU.area ~ au$villageID)
-boxplot(au$AU.hh ~ au$villageID)
+boxplot(dat$AU.area ~ dat$villageID,
+         las = 1, boxwex= .8,
+        names = vnames,
+        main = "AU area")
 
-table(au$village)
+table(dat$village)
 ## set up villages
 ## for loop: for each village, plot x
 
-par(mfrow = c(1, 1))
-for(i in 1:7){
-  au2 <- subset(au, villageID == 2 & type == "active")
-  hist(au2[, 11], main = i, , col = rgb(0, 0, 1, .5))
-}
-
-for(i in 1:7){
-  au2 <- subset(au, villageID == 2 & (type == "underused" | type == "unused" ))
-  hist(au2[, 11], main = i, col = rgb(1, 0, 0, .5), add = T)
-}
-
-for(i in 1:7){
-  au2 <- subset(au, villageID == i, breaks = 10)
-  hist(au2[, 20], add = T)
-}
-
-#for(i in 1:7){
-  # stacked bar plots of max threat, by count and area}
 
 par(mfrow = c(1,1))
-barplot(table(au$max.threat, au$village), col=c("black", "lightgrey", "yellow", "orange", "red", "darkred") , border="white", space=0.04, font.axis=2, xlab="village")
+barplot(table(dat$max.threat, dat$village), col=c("black", "lightgrey", "yellow", "orange", "red", "darkred") , border="white", space=0.04, font.axis=2, xlab="village")
 legend("topright", legend = c(5:0), fill= c("darkred", "red", "orange", "yellow", "lightgrey", "black"), bty = "n")
+
 
 
 ```

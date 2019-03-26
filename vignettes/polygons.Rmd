@@ -20,8 +20,8 @@ library(maptools)
 library(raster)
 library(sf)
 library(rgeos)
-#devtools::install_github("eblondel/cleangeo")
 library(cleangeo)
+library(plyr)
 
 library(devtools)
 library(githubinstall)
@@ -35,7 +35,9 @@ au <- readOGR(dsn = paste0(fl, "au_agg.shp"), layer = "au_agg")
 
 au <- merge(au, dat, by.x = "IDlong", 
                         by.y = "IDlong")
-# names(au)
+
+vill <- readOGR(dsn = paste0(fl, "allvillages1.shp"), layer = "allvillages1")
+vill$IDs <- c(7, 6, 5, 4, 1, 2, 3)
 
 rr <- readOGR(dsn = paste0(fl, "rivers_roads.shp"), layer = "rivers_roads")
 # Symbol IDs: 0 = minor road/path; 1 = major road; 2 = minor stream; 3 = river
@@ -45,7 +47,7 @@ sett <- readOGR(dsn = paste0(fl, "settlements.shp"), layer = "settlements")
 
 ## a function to make it easier to add aux layers to all the maps
 plot.sett <- function(x){
-  plot(x, col = "yellow", border = rgb(1, 1, 0, .9), add = T)
+  plot(x, col = rgb(1, 1, 0, 1), border = rgb(1, 1, 0, 1), add = T)
 }
 
 plot.rr <- function(x){
@@ -57,34 +59,115 @@ plot.rr <- function(x){
 
 # using plot.sett(sett) will add settlements; plot.rr(rr) will add roads, rivers
 
+
+```
+
+
+
+## By village: median threat vs. area abandoned
+(this is really sloppy but it works)
+```{r}
+# median value of max threat, by village
+v.max.threat <- as.data.frame(tapply(au$max.threat, au$villageID, median))
+colnames(v.max.threat) <- "median.threat"
+v.max.threat$villageID <- rownames(v.max.threat)
+
+## steps to get area active and inactive by village
+# subset active and inactive data
+active <- subset(au, inactive.pc < 100)
+inactive <- subset(au, inactive.pc == 100)
+
+# calculate area active and inactive by village using tapply on subset data
+v.area.active <- as.data.frame(tapply(active$AU.area, active$villageID, sum))
+colnames(v.area.active) <- "area.active"
+v.area.active$villageID <- rownames(v.area.active)
+
+v.area.inactive <- as.data.frame(tapply(inactive$AU.area, inactive$villageID, sum))
+colnames(v.area.inactive) <- "area.inactive"
+v.area.inactive$villageID <- rownames(v.area.inactive)
+
+# join everything together (using "join_all" from plyr)
+village.data <- plyr::join_all(list(v.max.threat, v.area.active, v.area.inactive), by = "villageID", type = "full")
+village.data[is.na(village.data)] <- 0
+
+village.data$pc.active <-  (village.data$area.active/ (village.data$area.active + village.data$area.inactive)) * 100
+
+dev.off()
+plot(village.data$pc.active ~ village.data$median.threat,  
+     xlab = "median threat", ylab = "pc active", main = "Threat by village", col = "yellow", cex = 1.5, pch = 20)
+text(village.data$pc.active ~ village.data$median.threat, labels = village.data$villageID, cex = .7)
+
+```
+
+
+All AUs, with scale bar and village boundaries
+```{r testplot, fig.width = 7.5, fig.height= 5}
+
 # plot all AUs ## TEST
 # including a scale just for this one
 ### FIX so scales aren't terrible
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(1, 0, 1, 0))
+
 for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg, col = "brown")
   plot.sett(sett)
   plot.rr(rr)
+  plot(vill, border = "grey",  add = T)
+  polygonsLabel(vill, labels = village.data$villageID)
   box(lty = 1)
   map.scale(ratio=F, relwidth=0.3, cex = .4, metric = T)
+  if ( i == 1){
+    legend("bottomright", c("Ag units", "village boundary", "settlement", "river/stream", "road"), fill = c("brown", "grey", "yellow", "cyan1", "orange"), bty = "n")
+  }
 }
+```
 
-## add area variable
+
+A few new variables
+
+```{r newvars}
+
+## calculate area variable
 
 au$calc.area <- area(au)
 
-
-inact <- subset(au, inactive.pc == 100)
-active <- subset(au, inactive.pc < 100) 
-
-
-
+## add variable for inactive (100% unused 5-yr average) vs active.
 au$active <- ifelse(au$inactive.pc == 100, "inactive", "active")
 
-?which
 
+## add variable: RELATIVE within-village threat: low or high
+v.med.threat <- as.data.frame(tapply(au$max.threat, au$villageID, median)) # create table of village median max.threat
+colnames(v.med.threat) <- "v.med.threat"
+v.med.threat$ID <- c(1:7) 
+au <- merge(au, v.med.threat, by.x = "villageID", by.y = "ID") # merge with AU data by villageID
+
+# use median to create new relative threat variable
+  # this is: for each village, which AUs are:
+      # 1. equal to or above village-median threat ("high")
+      # 2. below village-median threat ("low")
+au$rel.threat <- ifelse(au$max.threat >= au$v.med.threat, "high", "low") 
+
+
+# add variable "used.less" for abandoned OR declining area cultivated (10yr trend)
+  # 0 = same or increased area cultivated
+  # 1 = decreased area cultivated OR has not been cultivated in past 10 years or more
+au$abandoned <- ifelse(au$inactive.pc == 100, 1, 0)
+
+au$area.decline <- ifelse(au$trend.area == -1, 1, 0)
+
+au$used.less <- ifelse((ifelse(au$inactive.pc == 100, 1, 0) +
+                          ifelse(au$trend.area == -1, 1, 0))
+                       >= 1, 1, 0)
+
+table(au$used.less)
+
+
+
+## new variable: any sort of collective activity
+au$collective <- (au$monitor.3rd + au$monitor.shared)
+au$collective <- ifelse(au$collective >= 1, 1, 0)
 ```
 
 Not perfect, but reasonable start. Don't spend too much time making this perfect. 
@@ -299,7 +382,6 @@ for(i in 1:3){
   }
  }
 
-
 ```
 
 
@@ -401,13 +483,9 @@ layout(matrix(1,1))
 par(mar = c(5,1,1,1), oma = c(1, 1, 1, 1))
 hist(dat$travel.time, breaks = 15, main = "travel time", xlab = "minutes")
 
-
-hist(active$travel.time, breaks = 15, main = "travel time", xlab = "minutes")
-hist(inact$travel.time, breaks = 15, add= T, border = "red")
-
 boxplot(au$travel.time ~ au$active, main = "travel time", xlab = "minutes")
 tapply(au$travel.time, au$active, median)
-names(au)
+
  
 ```
   
@@ -514,6 +592,27 @@ for(i in 1:3){
 
 ```
   
+# Village relative threat
+```{r rel.threat, fig.width = 7.5, fig.height= 5}
+layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
+par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, rel.threat == "high"), col = "darkred", add = T)
+  plot(subset(reg, rel.threat == "low"), col = "orange", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
+  box(lty = 1, col = "grey")
+  mtext("Within-village relative threat", side = 3, outer = TRUE)
+  if ( i == 1){
+    legend("bottomright", c("high", "low"), fill = c("darkred","orange"), bty = "n")
+  }
+}
+```
+
+
+
 # Monitoring and protection
 ```{r 3rd.party, fig.width = 7.5, fig.height= 5}
 # 3rd PARTY
@@ -526,7 +625,7 @@ for(i in 1:3){
   plot.sett(sett)
   plot.rr(rr)
   box(lty = 1, col = "grey")
-  mtext("3rd party monitoring (any crop in past 2yrs", side = 3, outer = TRUE)
+  mtext("3rd party monitoring (any crop in past 2yrs)", side = 3, outer = TRUE)
   if ( i == 1){
     legend("bottomright", c(">50%", "=<50%"), fill = c("blue","white"), bty = "n")
   }
@@ -550,7 +649,7 @@ for(i in 1:3){
   box(lty = 1, col = "grey")
   mtext("shared monitoring (any crop in past 2yrs", side = 3, outer = TRUE)
   if ( i == 1){
-    legend("bottomright", c(">50%", "=<50%"), fill = c("blue","white"), bty = "n")
+    legend("bottomright", c("Y", "N"), fill = c("blue","white"), bty = "n")
   }
  }
 
@@ -561,27 +660,46 @@ I want relative within-village threat
 - anything assign "high" and "low" based on median
 - map
 
-
 bivariate tables of:
 - village-level threat vs use category (abandoned, under 50% used, >50% used)
 - travel distance vs. use category (maybe as x-y plots)
   
   
-  
-```{r, fig.width = 7.5, fig.height= 5}
-proj4string(au)
+## By village: median threat vs. area abandoned
+(this is really sloppy but it works)
+```{r}
+# median value of max threat, by village
+v.max.threat <- as.data.frame(tapply(au$max.threat, au$villageID, median))
+colnames(v.max.threat) <- "median.threat"
+v.max.threat$villageID <- rownames(v.max.threat)
 
-att <- data.frame(au)
+## steps to get area active and inactive by village
+# subset active and inactive data
+active <- subset(au, inactive.pc < 100)
+inactive <- subset(au, inactive.pc == 100)
 
-vnames <- c("Gr", "BB", "Dh", "Sp", "Ra", "Su", "Ro")
+# calculate area active and inactive by village using tapply on subset data
+v.area.active <- as.data.frame(tapply(active$AU.area, active$villageID, sum))
+colnames(v.area.active) <- "area.active"
+v.area.active$villageID <- rownames(v.area.active)
 
-layout(matrix(c(1,1), 1, 1))
-par(mar = c(1, 1, 1, 1), oma = c(2, 3, 2, 0))
-barplot(tapply(att$calc, att$villageID, function(x){sum(x)/1000}), las = 1,
-               names.arg = c("Gr", "BB", "Dh", "Sp", "Ra", "Su", "Ro"))
+v.area.inactive <- as.data.frame(tapply(inactive$AU.area, inactive$villageID, sum))
+colnames(v.area.inactive) <- "area.inactive"
+v.area.inactive$villageID <- rownames(v.area.inactive)
+
+# join everything together (using "join_all" from plyr)
+village.data <- plyr::join_all(list(v.max.threat, v.area.active, v.area.inactive), by = "villageID", type = "full")
+village.data[is.na(village.data)] <- 0
+
+village.data$pc.active <-  (village.data$area.active/ (village.data$area.active + village.data$area.inactive)) * 100
+
+dev.off()
+plot(village.data$pc.active ~ village.data$median.threat,  
+     xlab = "median threat", ylab = "pc active", main = "Threat by village", col = "yellow", cex = 1.5, pch = 20)
+text(village.data$pc.active ~ village.data$median.threat, labels = village.data$villageID, cex = .7)
 
 ```
-  
+
   
   
   
@@ -594,7 +712,22 @@ barplot(tapply(att$calc, att$villageID, function(x){sum(x)/1000}), las = 1,
   
   
 JUNK
-```{r junk, eval = F}
+
+```{r junk1, eval = F}
+proj4string(au)
+
+att <- data.frame(au)
+
+vnames <- c("Gr", "BB", "Dh", "Sp", "Ra", "Su", "Ro")
+
+layout(matrix(c(1,1), 1, 1))
+par(mar = c(1, 1, 1, 1), oma = c(2, 3, 2, 0))
+barplot(tapply(att$calc, att$villageID, function(x){sum(x)/1000}), las = 1,
+               names.arg = c("Gr", "BB", "Dh", "Sp", "Ra", "Su", "Ro"))
+
+```
+
+```{r junk2, eval = F}
 ### all vis combined: this works but it's hella ugly.
 layout(matrix(c(1,2,1,3), 2, 2, byrow = T), widths = c(1.4,1))
 par(mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
@@ -672,3 +805,414 @@ for(i in 1:3){
 ```
 
   
+  
+  I know I shouldnt but just messing around with some analyses here here:
+
+1. hyp: AUs with higher exposure to wildlife within a village are more likely to be farmed less or abandoned.  
+```{r}
+
+# A qiuck map, red is high relative threat
+for(i in 1:3){
+  reg <- au[au$region == i, ]
+  plot(reg)
+  plot(subset(reg, rel.threat == "high"), col = "red", add = T)
+}
+
+
+### test using chi-squared, to start, 
+
+dat2 <- data.frame(au)
+tbl <- table(dat2$used.less,dat2$rel.threat)
+
+tbl = tbl[1:2, ]
+chisq.test(tbl)
+
+```
+OK, this looks like there might be something there. 
+
+
+2. this relationship holds even when controlling for a few significant factors (the main one I'm worried about is convenience... are these abandoned just becuase they're far away?)
+### note: WILDLIFE EXPOSURE ISN'T A SIG PREDICTOR UNLESS I CONTROL FOR VILLAGES... WHY?. becuase village variablity, even if it's not significant for 5 of the villages, is accounting for some of the variablity. these are largely village level effects. talk to tim about this. 
+```{r}
+dev.off()
+
+dat2$rel.threat.high <- ifelse(dat2$rel.threat == "high", 1, 0)
+
+lm1 <- lm(used.less ~ rel.threat.high, dat2)
+summary(lm1)
+plot(used.less ~ rel.threat.high, dat2)
+
+
+lm2 <- lm(used.less ~ tt2 + rel.threat.high, dat2)
+summary(lm2)
+
+lm3 <- glm(used.less ~ tt2 + rel.threat.high + vis.settl, dat2, family = binomial)
+summary(lm3)
+
+lm4 <- glm(used.less ~ rel.threat.high + vis.any, dat2, family = "binomial")
+summary(lm4)
+
+
+lm5 <- glm(used.less ~ travel.time + vis.any, data = dat2, family = binomial)
+summary(lm5)
+
+lm6 <- lm(pc.cropped.summer ~ tt2 + vis.any + rel.threat.high, dat2)
+summary(lm6)
+
+lm7 <- glm(used.less ~  max.threat, dat2, family = binomial)
+summary(lm7)
+
+lm8 <- glm(used.less ~  max.threat + as.factor(villageID), dat2, family = binomial)
+summary(lm8)
+
+lm9 <- glm(used.less ~  tt2 + vis.settl + rel.threat.high + as.factor(villageID), dat2, family = binomial)
+summary(lm9)
+
+lm9 <- glm(used.less ~  travel.time + tt2, dat2, family = binomial)
+summary(lm9)
+
+```
+- lm and lm2: Even when cotrolling for average travel time to the AU (which should be a good proxy for the convenience of farming an AU; more distant == less convenient == used less); relative threat is a significant predictor of declining use
+- lm3: however, if you add a term for visibility; rel.threat is no longer significant, and the best predictor is if it's visible from the settlement or not. that is, if it's visible, that significantly decreases the odds that it's used less.
+- that is, defensibility is as important, if not MORE important, than exposure. people want to farm where they know they can protect
+
+
+### proportions
+```{r}
+## do more exposed fields have more abandonment
+
+# CI for high exposure fields that are used less
+prop.test(41, 80, conf.level = .90)
+# 90 percent confidence interval: 0.4156188 0.6085087
+
+# CI for low exposure fields that are used less
+prop.test(11, 41, conf.level = .90) 
+# 90 percent confidence interval: 0.161554 0.406672
+
+table(dat2$used.less, dat2$rel.threat.high)
+barplot(table(dat2$used.less, dat2$rel.threat.high))
+
+# log odds of less use/abandonment predicted by relative (within-village) exposure, and controlling for village
+glm1 <- glm(dat2$used.less ~ dat2$rel.threat.high + as.factor(dat2$villageID), family = "binomial")
+summary(glm1)
+## suggests threat matters
+
+# same as above but adding travel time
+glm2 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$travel.time +
+              as.factor(dat2$villageID), family = "binomial")
+summary(glm2)
+# relationship still holds
+
+# what about if using squared travel time instead
+glm3 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$tt2 +
+              as.factor(dat2$villageID), family = "binomial")
+summary(glm3)
+# threat is still a sig predictor 
+
+# what about if using visibility instead
+glm3 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$vis.any +
+              as.factor(dat2$villageID), family = "binomial")
+summary(glm3)
+# threat is still a sig predictor, but visibility is a bigger predictor 
+
+glm4 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$borders.forest +
+              as.factor(dat2$villageID), family = "binomial")
+summary(glm4)
+
+glm5 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$borders.forest + 
+              as.factor(dat2$villageID), family = "binomial")
+
+
+```
+
+
+
+
+MAPS FOR PRESENTATION:
+
+1. VILLAGES
+```{r}
+dev.off()
+par(mar = c(0, 0, 0, 0), mfrow = c(2, 4), oma = c(1, 0, 1, 0))
+
+for(i in 1:7){
+  plot(vill[vill$IDs == i,], col = "grey", border = "grey", main = i, line= -1.5, cex.main = 2)
+  plot(au[au$villageID == i, ], col = "brown3", border = "brown", add = T)
+  plot.sett(sett)
+  plot.rr(rr)
+  #plot(vill, border = "grey",  add = T)
+  box(lty = 1, col = "lightgrey")
+
+  map.scale(ratio=F, relwidth=0.5, cex = .5, metric = T)
+}
+
+plot(0, 0, type='n', bty='n', xaxt='n', yaxt='n')
+    legend("left", c("Ag units", "village boundary", "settlement", "river/stream", "road"), fill = c("brown3", "grey", "yellow", "cyan1", "orange"), bty = "n", cex = 1.5)
+
+```
+
+Districts in study
+```{r}
+dev.off()
+adm <- readOGR("/Users/roopa 1/Desktop/Himachal_data/UsefulShapefiles/hp/hp.shp")
+
+plot(adm, col = "lightgrey", border = "black")
+plot(adm[c(99, 100, 112), ], add = T, col = c("aquamarine", "darkcyan", "chocolate2"), border = "black")
+legend("bottomright", c("Padhar", "Palampur", "Jaisinghpur"), fill = c("chocolate2", "darkcyan", "aquamarine"), bty = "n", cex = 1)
+
+
+## HP map
+dev.off()
+#ind <- readRDS("/Users/roopa 1/Dropbox/Clark/2017-FALL/Rclass/Assignment1a/india1/inst/extdata/IND_adm3.rds")
+
+#plot(ind)
+
+```
+
+Maps for just for one village
+  include:
+  - pc cultivated (three year average, summer)
+  - visible from settlement (y/n)
+  - travel time
+  - # Households
+  - rel. wildlife threat
+  - Collective monitoring practiced (y/n)
+ 
+  - [time permitting] primary crops (summer, winter)
+  
+  
+```{r}
+dev.off()
+par(mar = c(0, 0, .5, 0), mfrow = c(2, 4), oma = c(1, 0, 1, 0))
+
+## fill in village ID and corresponding units for village of interest
+villID <- 2
+units <- c(28:49)
+
+# Village features
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], main = "Village features", line= -1.5, cex.main = 1)
+  plot(reg, col = "lightgreen", add = T)
+  #plot(reg, col = "lightgreen")
+  plot.sett(sett)
+  plot.rr(rr)
+  plot(vill, border = "grey",  add = T)
+  #polygonsLabel(vill, labels = village.data$villageID)
+  #box(lty = 1)
+  #map.scale(ratio=F, relwidth=0.3, cex = .4, metric = T)
+legend("bottomright", c("Ag units", "village boundary", "settlement", "river/stream", "road"), fill = c("lightgreen", "grey", "yellow", "cyan1", "orange"), bty = "n", cex = .7, y.intersp=.7)
+
+
+# PC CULTIVATED
+cols <- c("#ffffff", "#e6ffe6", "#ccffcc", "#99ff99", "#66ff66", "#1aff1a", "#00e600", "#00b300",
+  "#008000", "#004d00", "#003300")
+
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "% area sown \n (5yr winter ave.)", line= -1.8, 
+       cex.main = 1)
+  plot(reg, add = T)
+plot(subset(reg, pc.cropped.winter > 0 & pc.cropped.winter <= 10 ), col = cols[1], add = T)
+ plot(subset(reg, pc.cropped.winter > 10 & pc.cropped.winter <= 20 ), col = cols[2], add = T)
+ plot(subset(reg, pc.cropped.winter > 20 & pc.cropped.winter <= 30 ), col = cols[3], add = T)
+ plot(subset(reg, pc.cropped.winter > 30 & pc.cropped.winter <= 40 ), col = cols[4], add = T)
+ plot(subset(reg, pc.cropped.winter > 40 & pc.cropped.winter <= 50 ), col = cols[5], add = T)
+ plot(subset(reg, pc.cropped.winter > 50 & pc.cropped.winter <= 60 ), col = cols[6], add = T)
+ plot(subset(reg, pc.cropped.winter > 60 & pc.cropped.winter <= 70 ), col = cols[7], add = T)
+ plot(subset(reg, pc.cropped.winter > 70 & pc.cropped.winter <= 80 ), col = cols[8], add = T)
+ plot(subset(reg, pc.cropped.winter > 80 & pc.cropped.winter <= 90 ), col = cols[9], add = T)
+ plot(subset(reg, pc.cropped.winter > 90 & pc.cropped.winter <= 100 ), col = cols[10], add = T)
+  plot(subset(reg, pc.cropped.winter == 0), col = "darkred", add = T)
+
+  legend("bottomright", c("none", "1-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", 
+                     "71-80", "81-90", "91-100"), fill = c("darkred", cols), 
+         bty = "n", cex = .7, y.intersp=.7)
+
+
+# Majority visible from settlement
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "Visible from \n settlement", line= -1.8, cex.main = 1)
+  plot(reg, add = T)
+  plot(subset(reg, vis.settl == 1), col = "blue", add = T)
+  #box(lty = 1, col = "grey")
+legend("bottomright", c("Y", "N"), fill = c("blue","white"), bty = "n", cex = .7, y.intersp=.7)
+
+
+
+# TRAVEL TIME
+cols <- c("#ffffff", "#e6e6ff", "#b3b3ff", "#8080ff", "#4d4dff", "#1a1aff", "#0000b3","#000099", "#00004d", "#00001a")
+
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "Travel time (mins)", line= -1.5, cex.main = 1)
+  plot(reg, add = T)
+plot(subset(reg, travel.time == 0), col = cols[1], add = T)
+ plot(subset(reg, travel.time > 0 & travel.time <= 2 ), col = cols[2], add = T)
+ plot(subset(reg, travel.time > 3 & travel.time <= 5 ), col = cols[3], add = T)
+ plot(subset(reg, travel.time > 5 & travel.time <= 10 ), col = cols[4], add = T)
+ plot(subset(reg, travel.time > 10 & travel.time <= 15 ), col = cols[5], add = T)
+ plot(subset(reg, travel.time > 15 & travel.time <= 20 ), col = cols[6], add = T)
+ plot(subset(reg, travel.time > 20 & travel.time <= 30 ), col = cols[7], add = T)
+ plot(subset(reg, travel.time > 30 & travel.time <= 45 ), col = cols[8], add = T)
+ plot(subset(reg, travel.time > 45 & travel.time <= 60 ), col = cols[9], add = T)
+ plot(subset(reg, travel.time > 60 & travel.time <= 80 ), col = cols[10], add = T)
+
+  legend("bottomright", c("0", "1-2", "3-5", "6-10", "11-15", "16-20", "21-30", "31-45", 
+                     "46-60", "61-80"), fill = c(cols), 
+         bty = "n", cex = .7, y.intersp=.7)
+
+
+  
+# Managing HHs
+cols <- c("#ffffff", "#e6e6ff", "#b3b3ff", "#8080ff", "#4d4dff", "#1a1aff", "#0000b3","#000099", "#00004d", "#00001a")
+
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "# Managing \n households", line= -1.8, cex.main = 1)
+  plot(reg, add = T)
+plot(subset(reg, travel.time == 0), col = cols[1], add = T)
+ plot(subset(reg, AU.hh > 0 & AU.hh <= 10 ), col = cols[2], add = T)
+ plot(subset(reg, AU.hh > 10 & AU.hh <= 20 ), col = cols[3], add = T)
+ plot(subset(reg, AU.hh > 20 & AU.hh <= 30 ), col = cols[4], add = T)
+ plot(subset(reg, AU.hh > 30 & AU.hh <= 50 ), col = cols[5], add = T)
+
+  legend("bottomright", c("1-10", "10-20", "21-30", "31-40"), fill = c(cols[c(2, 3, 4, 5)]), 
+         bty = "n", cex = .7, y.intersp=.7)
+
+    
+# CROP RAIDING THREAT
+cols <- sapply(1:5, function(x){
+  rgb(1, 0, 0, (2.5^x)/100)
+})
+
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "Crop raiding \n relative threat", line= -1.8, 
+         cex.main = 1)
+  plot(reg, add = T)
+      for(j in 1:5){
+      plot(subset(reg, max.threat == j), col = cols[j], add = T)
+      }
+  # box(lty = 1, col = "grey")
+  legend("bottomright", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n", cex = .7, y.intersp=.7)
+
+  
+# 3rd PARTY monitoring
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,],border = "grey", main = "3rd party \n monitoring", line= -1.8, cex.main = 1)
+  plot(reg, add = T)
+  plot(subset(reg, monitor.3rd == 1), col = "blue", add = T)
+  #plot.sett(sett)
+  #plot.rr(rr)
+  #box(lty = 1, col = "grey")
+
+legend("bottomright", c("Y", "N"), fill = c("blue","white"), bty = "n", cex = .7, y.intersp=.7)
+
+# rotational monitoring
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "Rotational \n monitoring", line= -1.8, cex.main = 1)
+  plot(reg, add = T)
+  plot(subset(reg, monitor.shared == 1), col = "blue", add = T)
+
+    legend("bottomright", c("Y", "N"), fill = c("blue","white"), bty = "n", cex = .7, y.intersp=.7)
+  map.scale(ratio=F, relwidth=0.38, cex = .7, metric = T)
+ 
+
+
+
+
+```
+  
+
+Districts in study
+```{r}
+dev.off()
+adm <- readOGR("/Users/roopa 1/Desktop/Himachal_data/UsefulShapefiles/hp/hp.shp")
+
+plot(adm, col = "lightgrey", border = "black")
+plot(adm[c(99, 100, 112), ], add = T, col = c("aquamarine", "darkcyan", "chocolate2"), border = "black")
+legend("bottomright", c("Padhar", "Palampur", "Jaisinghpur"), fill = c("chocolate2", "darkcyan", "aquamarine"), bty = "n", cex = 1)
+
+
+## HP map
+dev.off()
+#ind <- readRDS("/Users/roopa 1/Dropbox/Clark/2017-FALL/Rclass/Assignment1a/india1/inst/extdata/IND_adm3.rds")
+
+#plot(ind)
+
+```
+
+
+Subsample  
+```{r}
+dev.off()
+par(mar = c(0, 0, .5, 0), mfrow = c(2, 3), oma = c(1, 0, -.1, 0))
+
+## fill in village ID and corresponding units for village of interest
+villID <- 2
+units <- c(28:49)
+
+
+# PC CULTIVATED
+cols <- c("#ffffff", "#e6ffe6", "#ccffcc", "#99ff99", "#66ff66", "#1aff1a", "#00e600", "#00b300",
+  "#008000", "#004d00", "#003300")
+
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "(b) % area sown \n (5yr winter ave.)", line= -2.45, 
+       cex.main = 1)
+  plot(reg, add = T)
+plot(subset(reg, pc.cropped.winter > 0 & pc.cropped.winter <= 10 ), col = cols[1], add = T)
+ plot(subset(reg, pc.cropped.winter > 10 & pc.cropped.winter <= 20 ), col = cols[2], add = T)
+ plot(subset(reg, pc.cropped.winter > 20 & pc.cropped.winter <= 30 ), col = cols[3], add = T)
+ plot(subset(reg, pc.cropped.winter > 30 & pc.cropped.winter <= 40 ), col = cols[4], add = T)
+ plot(subset(reg, pc.cropped.winter > 40 & pc.cropped.winter <= 50 ), col = cols[5], add = T)
+ plot(subset(reg, pc.cropped.winter > 50 & pc.cropped.winter <= 60 ), col = cols[6], add = T)
+ plot(subset(reg, pc.cropped.winter > 60 & pc.cropped.winter <= 70 ), col = cols[7], add = T)
+ plot(subset(reg, pc.cropped.winter > 70 & pc.cropped.winter <= 80 ), col = cols[8], add = T)
+ plot(subset(reg, pc.cropped.winter > 80 & pc.cropped.winter <= 90 ), col = cols[9], add = T)
+ plot(subset(reg, pc.cropped.winter > 90 & pc.cropped.winter <= 100 ), col = cols[10], add = T)
+  plot(subset(reg, pc.cropped.winter == 0), col = "darkred", add = T)
+
+  legend("bottomright", c("none", "", "", "", "", "41-50", "", "", 
+                     "", "", "91-100"), fill = c("darkred", cols), border = "white",
+         bty = "n", cex = .8, y.intersp=.5)
+
+# CROP RAIDING THREAT
+cols <- sapply(1:5, function(x){
+  rgb(1, 0, 0, (2.5^x)/100)
+})
+
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "(c) Crop raiding \n relative threat", line= -2.45, 
+         cex.main = 1)
+  plot(reg, add = T)
+      for(j in 1:5){
+      plot(subset(reg, max.threat == j), col = cols[j], add = T)
+      }
+  # box(lty = 1, col = "grey")
+  legend("bottomright", c("severe", "high", "moderate", "low", "v. low"), fill = rev(cols), bty = "n", cex = 1, y.intersp=.7, border = "white")
+  map.scale(ratio=F, relwidth=0.2, cex = .7, metric = T)  
+  
+# TRAVEL TIME
+cols <- c("#ffffff", "#e6e6ff", "#b3b3ff", "#8080ff", "#4d4dff", "#1a1aff", "#0000b3","#000099", "#00004d", "#00001a")
+
+  reg <- au[units,]
+  plot(vill[vill$IDs == villID,], border = "grey", main = "(d) Travel time (mins)", line= -1.8, cex.main = 1)
+  plot(reg, add = T)
+plot(subset(reg, travel.time == 0), col = cols[1], add = T)
+ plot(subset(reg, travel.time > 0 & travel.time <= 2 ), col = cols[2], add = T)
+ plot(subset(reg, travel.time > 3 & travel.time <= 5 ), col = cols[3], add = T)
+ plot(subset(reg, travel.time > 5 & travel.time <= 10 ), col = cols[4], add = T)
+ plot(subset(reg, travel.time > 10 & travel.time <= 15 ), col = cols[5], add = T)
+ plot(subset(reg, travel.time > 15 & travel.time <= 20 ), col = cols[6], add = T)
+ plot(subset(reg, travel.time > 20 & travel.time <= 30 ), col = cols[7], add = T)
+ plot(subset(reg, travel.time > 30 & travel.time <= 45 ), col = cols[8], add = T)
+ plot(subset(reg, travel.time > 45 & travel.time <= 60 ), col = cols[9], add = T)
+ plot(subset(reg, travel.time > 60 & travel.time <= 80 ), col = cols[10], add = T)
+
+  legend("bottomright", c("0", "1-2", "3-5", "6-10", "11-15", "16-20", "21-30", "31-45", 
+                     "46-60", "61-80"), fill = c(cols), 
+         bty = "n", cex = .8, y.intersp=.7, border = "white")
+
+
+
+ 
+
+
+```

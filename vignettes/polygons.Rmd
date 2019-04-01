@@ -93,9 +93,12 @@ village.data[is.na(village.data)] <- 0
 village.data$pc.active <-  (village.data$area.active/ (village.data$area.active + village.data$area.inactive)) * 100
 
 dev.off()
+par(oma = c(3, 3, 3, 3))
 plot(village.data$pc.active ~ village.data$median.threat,  
-     xlab = "median threat", ylab = "pc active", main = "Threat by village", col = "yellow", cex = 1.5, pch = 20)
-text(village.data$pc.active ~ village.data$median.threat, labels = village.data$villageID, cex = .7)
+     xlab = "Crop raiding threat level", ylab = "% arable land currently cultivated", col = "darkred", cex = 2.2, pch = 20, bty = "l")
+
+#text(village.data$pc.active ~ village.data$median.threat, labels = village.data$villageID, cex = .7)
+
 
 ```
 
@@ -804,14 +807,10 @@ for(i in 1:3){
 
 ```
 
-  
-  
-  I know I shouldnt but just messing around with some analyses here here:
-
-1. hyp: AUs with higher exposure to wildlife within a village are more likely to be farmed less or abandoned.  
-```{r}
 
 # A qiuck map, red is high relative threat
+```{r}
+
 for(i in 1:3){
   reg <- au[au$region == i, ]
   plot(reg)
@@ -819,111 +818,128 @@ for(i in 1:3){
 }
 
 
-### test using chi-squared, to start, 
+
+
+
+```
+
+
+Create a dataframe of AU data
+```{r}
 
 dat2 <- data.frame(au)
-tbl <- table(dat2$used.less,dat2$rel.threat)
-
-tbl = tbl[1:2, ]
-chisq.test(tbl)
-
-```
-OK, this looks like there might be something there. 
-
-
-2. this relationship holds even when controlling for a few significant factors (the main one I'm worried about is convenience... are these abandoned just becuase they're far away?)
-### note: WILDLIFE EXPOSURE ISN'T A SIG PREDICTOR UNLESS I CONTROL FOR VILLAGES... WHY?. becuase village variablity, even if it's not significant for 5 of the villages, is accounting for some of the variablity. these are largely village level effects. talk to tim about this. 
-```{r}
-dev.off()
-
 dat2$rel.threat.high <- ifelse(dat2$rel.threat == "high", 1, 0)
 
-lm1 <- lm(used.less ~ rel.threat.high, dat2)
-summary(lm1)
-plot(used.less ~ rel.threat.high, dat2)
+## fixing dat2, which is dat2 but with rachhiara's rel.threat.high corrected
+dat2[dat2$villageID==4,c("rel.threat.high")] <- 0
 
-
-lm2 <- lm(used.less ~ tt2 + rel.threat.high, dat2)
-summary(lm2)
-
-lm3 <- glm(used.less ~ tt2 + rel.threat.high + vis.settl, dat2, family = binomial)
-summary(lm3)
-
-lm4 <- glm(used.less ~ rel.threat.high + vis.any, dat2, family = "binomial")
-summary(lm4)
-
-
-lm5 <- glm(used.less ~ travel.time + vis.any, data = dat2, family = binomial)
-summary(lm5)
-
-lm6 <- lm(pc.cropped.summer ~ tt2 + vis.any + rel.threat.high, dat2)
-summary(lm6)
-
-lm7 <- glm(used.less ~  max.threat, dat2, family = binomial)
-summary(lm7)
-
-lm8 <- glm(used.less ~  max.threat + as.factor(villageID), dat2, family = binomial)
-summary(lm8)
-
-lm9 <- glm(used.less ~  tt2 + vis.settl + rel.threat.high + as.factor(villageID), dat2, family = binomial)
-summary(lm9)
-
-lm9 <- glm(used.less ~  travel.time + tt2, dat2, family = binomial)
-summary(lm9)
-
+## removing AUs that have been completely abandoned for more than 10 years
+dat4 <- subset(dat2, inactive.pc != 100 | inactive.years < 10)
+dim(dat4)
+## should have 109 
 ```
-- lm and lm2: Even when cotrolling for average travel time to the AU (which should be a good proxy for the convenience of farming an AU; more distant == less convenient == used less); relative threat is a significant predictor of declining use
-- lm3: however, if you add a term for visibility; rel.threat is no longer significant, and the best predictor is if it's visible from the settlement or not. that is, if it's visible, that significantly decreases the odds that it's used less.
-- that is, defensibility is as important, if not MORE important, than exposure. people want to farm where they know they can protect
 
+## regressions using dat4
+## what predicts used.less?
 
-### proportions
+## tried logit and linear models. also tried running models with SEs clustered at village. 
+after a lot of reading, decided:
+- i have too few clusters to cluster standard errors
+- i get very similar results in terms of coefficients and p values with and without clustering, as long as I include dummy variables for villages in my models
+- I also get similar significance for variables with logit and linear models, so I'm sticking to linear models becuase they're easier to interpret. 
+- 
 ```{r}
-## do more exposed fields have more abandonment
 
-# CI for high exposure fields that are used less
-prop.test(41, 80, conf.level = .90)
-# 90 percent confidence interval: 0.4156188 0.6085087
+## linear models
 
-# CI for low exposure fields that are used less
-prop.test(11, 41, conf.level = .90) 
-# 90 percent confidence interval: 0.161554 0.406672
+## 1 
+lm1 <- lm(dat4$used.less ~ dat4$rel.threat.high + dat4$collective + 
+               dat4$vis.any +  as.factor(dat4$villageID))
+summary(lm1)
+## I think this is reasonable
 
-table(dat2$used.less, dat2$rel.threat.high)
-barplot(table(dat2$used.less, dat2$rel.threat.high))
 
-# log odds of less use/abandonment predicted by relative (within-village) exposure, and controlling for village
-glm1 <- glm(dat2$used.less ~ dat2$rel.threat.high + as.factor(dat2$villageID), family = "binomial")
+## 2 - add borders forest
+lm2 <- lm(dat4$used.less ~ dat4$rel.threat.high + dat4$collective + dat4$vis.any +
+            dat4$borders.forest + as.factor(dat4$villageID))
+summary(lm2)
+## rel.threat high is no longer sig, but close. adj R2 is 26%. wish I had soil quality measures
+
+
+
+############
+
+## logits
+
+## 1 
+glm1 <- glm(dat4$used.less ~ dat4$rel.threat.high + dat4$collective + 
+               dat4$vis.any +  as.factor(dat4$villageID), family = "binomial")
 summary(glm1)
-## suggests threat matters
+## I think this is reasonable
 
-# same as above but adding travel time
-glm2 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$travel.time +
-              as.factor(dat2$villageID), family = "binomial")
+
+## 2 - add borders forest
+glm2 <- glm(dat4$used.less ~ dat4$rel.threat.high + dat4$collective +    dat4$borders.forest + dat4$vis.any +  as.factor(dat4$villageID), family = "binomial")
 summary(glm2)
-# relationship still holds
-
-# what about if using squared travel time instead
-glm3 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$tt2 +
-              as.factor(dat2$villageID), family = "binomial")
-summary(glm3)
-# threat is still a sig predictor 
-
-# what about if using visibility instead
-glm3 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$vis.any +
-              as.factor(dat2$villageID), family = "binomial")
-summary(glm3)
-# threat is still a sig predictor, but visibility is a bigger predictor 
-
-glm4 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$borders.forest +
-              as.factor(dat2$villageID), family = "binomial")
-summary(glm4)
-
-glm5 <- glm(dat2$used.less ~ dat2$rel.threat.high + dat2$borders.forest + 
-              as.factor(dat2$villageID), family = "binomial")
+## rel.threat high is no longer sig, but close. adj R2 is 26%. wish I had soil quality measures
 
 
 ```
+
+
+For each AU:
+- what % is active now?
+  - datx$active.now <- (100 - datx$inactive.pc) * (datx$AU.area)
+  
+- What PC was active ~10 years ago
+Ie, add back on to each AU area that was abandondoned 7-12 years ago
+- datx$change.10 <- ifelse(inactive.years >= 7 | inactive.years <= 12, 1, 0)
+  - datx$active.10 <- datx$active.now + (datx$inactive.pc)*(datx$AU.area)*datx$change.10
+
+```{r}
+
+# median value of max threat, by village
+v.max.threat <- as.data.frame(tapply(au$max.threat, au$villageID, median))
+colnames(v.max.threat) <- "median.threat"
+v.max.threat$villageID <- rownames(v.max.threat)
+
+# total cultivable area (use dat2, as I want all AUs accounted for)
+vdat1 <- as.data.frame(tapply(dat2$calc.area, dat2$villageID, sum))
+vdat1$villageID <- rownames(vdat1)
+colnames(vdat1) <- c("tot.area", "villageID")
+
+# area active now
+dat2$area.active.now <- dat2$calc.area - (dat2$inactive.pc)/100 * (dat2$calc.area)
+vdat2 <- as.data.frame(tapply(dat2$area.active.now, dat2$villageID, sum))
+vdat2$villageID <- rownames(vdat2)
+colnames(vdat2) <- c("area.active.now", "villageID")
+
+
+# area active 10 years ago
+  ## did it go through a major change 7-12 years ago? (y = 1)
+dat2$change.10 <- ifelse(dat2$inactive.years <= 7 | dat2$inactive.years >= 12, 0, 1)
+  ## add back on that part to current active area
+dat2$area.active.10 <- dat2$area.active.now + (dat2$inactive.pc)/100 * 
+  (dat2$calc.area)* dat2$change.10 
+vdat2a <- as.data.frame(tapply(dat2$area.active.10, dat2$villageID, sum))
+vdat2a$villageID <- rownames(vdat2a)
+colnames(vdat2a) <- c("area.active.10", "villageID")
+
+vdat3 <- plyr::join_all(list(v.max.threat, vdat1, vdat2, vdat2a), by = "villageID", type = "full")
+village.data[is.na(village.data)] <- 0
+
+vdat3$pc.area.active.now <- (vdat3$area.active.now/vdat3$tot.area)*100
+vdat3$pc.area.active.10 <- (vdat3$area.active.10/vdat3$tot.area)*100
+
+dev.off()
+plot(vdat3$pc.area.active.now ~ vdat3$median.threat,  
+     xlab = "median threat", ylab = "pc active", main = "Threat by village", col = "yellow", cex = 1.5, pch = 20)
+plot(vdat3$pc.area.active.10 ~ vdat3$median.threat, col = "red", cex = 1.5, pch = 20, add = T)
+text(vdat3$pc.area.active.now ~ vdat3$median.threat, labels = village.data$villageID, cex = .7)
+
+
+```
+
 
 
 

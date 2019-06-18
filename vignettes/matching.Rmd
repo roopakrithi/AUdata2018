@@ -1,0 +1,161 @@
+---
+title: "Matching"
+author: "Vignette Author"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+
+I want to see if it's even feasible to use matching with the AU data to test:
+-	1. Reducing crop losses
+-	2. Reducing unwanted fallowing/abandonment 
+
+```{r}
+library(devtools)
+library(githubinstall)
+library(rgdal)
+library(MatchIt)
+library(statsr)
+library(ggplot2)
+
+```
+
+
+Get AU data (dat is spreadsheet of all AUs, au is polygons of all AUs. See "cleanup" for how these were created)
+```{r setup, include = FALSE}
+
+install_github("roopakrithi/AUdata2018", build_vignettes = F)
+
+fl <- system.file("extdata/", package = "AUdata2018") 
+dat <- read.csv(paste0(fl, "au_data.csv"))
+dat <- as.data.frame(dat, stringsAsFactors = F)
+
+au <- readOGR(dsn = paste0(fl, "au_agg.shp"), layer = "au_agg")
+
+au <- merge(au, dat, by.x = "IDlong", 
+                        by.y = "IDlong")
+
+## calculate area variable
+
+au$calc.area <- area(au)
+
+## add variable for inactive (100% unused 5-yr average) vs active.
+au$active <- ifelse(au$inactive.pc == 100, "inactive", "active")
+
+
+## add variable: RELATIVE within-village threat: low or high
+v.med.threat <- as.data.frame(tapply(au$max.threat, au$villageID, median)) # create table of village median max.threat
+colnames(v.med.threat) <- "v.med.threat"
+v.med.threat$ID <- c(1:7) 
+au <- merge(au, v.med.threat, by.x = "villageID", by.y = "ID") # merge with AU data by villageID
+
+# use median to create new relative threat variable
+  # this is: for each village, which AUs are:
+      # 1. equal to or above village-median threat ("high")
+      # 2. below village-median threat ("low")
+au$rel.threat <- ifelse(au$max.threat >= au$v.med.threat, "high", "low") 
+
+
+# add variable "used.less" for abandoned OR declining area cultivated (10yr trend)
+  # 0 = same or increased area cultivated
+  # 1 = decreased area cultivated OR has not been cultivated in past 10 years or more
+au$abandoned <- ifelse(au$inactive.pc == 100, 1, 0)
+
+au$area.decline <- ifelse(au$trend.area == -1, 1, 0)
+
+au$used.less <- ifelse((ifelse(au$inactive.pc == 100, 1, 0) +
+                          ifelse(au$trend.area == -1, 1, 0))
+                       >= 1, 1, 0)
+
+table(au$used.less)
+
+
+## new variable: any sort of collective activity
+au$collective <- (au$monitor.3rd + au$monitor.shared)
+au$collective <- ifelse(au$collective >= 1, 1, 0)
+
+dat2 <- data.frame(au)
+dat2$rel.threat.high <- ifelse(dat2$rel.threat == "high", 1, 0)
+
+## fixing dat2, which is dat2 but with rachhiara's rel.threat.high corrected
+dat2[dat2$villageID==4,c("rel.threat.high")] <- 0
+
+## removing AUs that have been completely abandoned for more than 10 years
+dat4 <- subset(dat2, inactive.pc != 100 | inactive.years <= 10)
+dim(dat4)
+## should have 109
+
+
+
+
+
+```
+
+
+get matchit
+```{r}
+#install.packages("MatchIt")
+#install.packages("WhatIf")
+
+
+names(dat4)
+m1 <- matchit(collective ~ AU.hh + travel.time + max.threat +
+              as.factor(region),
+              data = dat4, method = "nearest", ratio = 1, 
+              discard = "both", reestimate = T, caliper = 1 )
+summary(m1)
+#plot(m1, type = "jitter") 
+#plot(m1, type = "hist")
+
+df.match <- match.data(m1)
+match.ca <- subset(df.match, collective == 1)
+match.noca <- subset(df.match, collective == 0)
+
+##__________________
+
+## visualizing how well the match worked
+
+par(mar = c(1, 3, 1, 0), mfrow = c(2, 4), oma = c(1, 0, 1, 0))
+#dfmatch2 <- df.match[, c("AU.area", "AU.hh", "travel.time", "max.threat", "collective")]
+
+for(i in 1:4) { print(tapply(dfmatch2[,i], dfmatch2$collective, summary)) }
+
+par(mar = c(1, 3, 1, 0), mfrow = c(2, 4), oma = c(1, 0, 1, 0))
+boxplot(match.ca$AU.area, main = "ca-area", ylim = c(0, 11))
+boxplot(match.noca$AU.area, main = "noca-area", ylim = c(0, 11))
+
+boxplot(match.ca$AU.hh, main = "ca-HH", ylim = c(0, 50))
+boxplot(match.noca$AU.hh, main = "noca-HH", ylim = c(0, 50))
+
+boxplot(match.ca$travel.time, main = "ca-TT", ylim = c(0, 75))
+boxplot(match.noca$travel.time, main = "noca-TT", ylim = c(0, 75))
+
+boxplot(match.ca$max.threat, main = "ca-maxthreat", ylim = c(0, 5))
+boxplot(match.noca$max.threat, main = "noca-maxthreat", ylim = c(0, 5))
+
+## __________________
+
+# t-test: difference in proportions of used-less
+
+inference(y=as.factor(used.less), x=as.factor(collective), data = df.match, type = "ht", null = 0, statistic = "proportion", success = "1", method = "theoretical", alternative = "twosided", sig_level = 0.05, conf_level = 0.95)
+
+
+# t-test: difference in losses (max. loss to a major crop in past year)
+
+
+
+```
+
+TO do:
+- add a quality/conditions measure. think about if this is just "high" "low", three parts, or something else. but it needs to be useful. 
+
+- after doing this, test:
+  - predictors of collectives within villages, including the "quality/conditions" variable
+  - redo matching, with this included
+  
